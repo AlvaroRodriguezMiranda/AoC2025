@@ -1,7 +1,9 @@
 package aoc.day02;
 
 import aoc.day02.input.ProductRangeParser;
-import aoc.day02.product.ProductIdSumCalculator;
+import aoc.day02.solver.DoublePatternInvalidProductIdRule;
+import aoc.day02.solver.ProductIdSumCalculator;
+import aoc.day02.solver.RepeatedPatternInvalidProductIdRule;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -9,7 +11,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class GiftShopPuzzleTest {
     @Test
     void solvesOfficialExampleForPartOne() {
-        GiftShopPuzzle puzzle = new GiftShopPuzzle(new ProductRangeParser(), new ProductIdSumCalculator());
+        GiftShopPuzzle puzzle = new GiftShopPuzzle(
+                new ProductRangeParser(),
+                new ProductIdSumCalculator(new DoublePatternInvalidProductIdRule()),
+                new ProductIdSumCalculator(new RepeatedPatternInvalidProductIdRule())
+        );
 
         long result = puzzle.solvePartOne("""
                 11-22,95-115,998-1012,1188511880-1188511890,222220-222224,
@@ -22,7 +28,11 @@ class GiftShopPuzzleTest {
 
     @Test
     void solvesOfficialExampleForPartTwo() {
-        GiftShopPuzzle puzzle = new GiftShopPuzzle(new ProductRangeParser(), new ProductIdSumCalculator());
+        GiftShopPuzzle puzzle = new GiftShopPuzzle(
+                new ProductRangeParser(),
+                new ProductIdSumCalculator(new DoublePatternInvalidProductIdRule()),
+                new ProductIdSumCalculator(new RepeatedPatternInvalidProductIdRule())
+        );
 
         long result = puzzle.solvePartTwo("""
                 11-22,95-115,998-1012,1188511880-1188511890,222220-222224,

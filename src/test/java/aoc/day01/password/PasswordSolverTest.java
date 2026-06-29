@@ -1,6 +1,6 @@
 package aoc.day01.password;
 
-import aoc.day01.dial.DialRotation;
+import aoc.day01.dial.RotationProgram;
 import aoc.day01.input.RotationParser;
 import org.junit.jupiter.api.Test;
 
@@ -10,11 +10,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class PasswordSolverTest {
     private final RotationParser parser = new RotationParser();
-    private final PasswordSolver solver = new PasswordSolver();
 
     @Test
     void countsOfficialExampleRotationsEndingAtZero() {
-        List<DialRotation> rotations = parser.parseLines(List.of(
+        RotationProgram rotationProgram = parser.parseProgram(List.of(
                 "L68",
                 "L30",
                 "R48",
@@ -27,32 +26,32 @@ class PasswordSolverTest {
                 "L82"
         ));
 
-        int password = solver.countRotationsEndingAtZero(rotations);
+        int password = new FinalPositionPasswordSolver().solve(rotationProgram);
 
         assertEquals(3, password);
     }
 
     @Test
     void doesNotCountInitialPosition() {
-        List<DialRotation> rotations = parser.parseLines(List.of("R1"));
+        RotationProgram rotationProgram = parser.parseProgram(List.of("R1"));
 
-        int password = solver.countRotationsEndingAtZero(rotations);
+        int password = new FinalPositionPasswordSolver().solve(rotationProgram);
 
         assertEquals(0, password);
     }
 
     @Test
     void countsEveryRotationThatFinishesAtZero() {
-        List<DialRotation> rotations = parser.parseLines(List.of("R50", "L100", "R200"));
+        RotationProgram rotationProgram = parser.parseProgram(List.of("R50", "L100", "R200"));
 
-        int password = solver.countRotationsEndingAtZero(rotations);
+        int password = new FinalPositionPasswordSolver().solve(rotationProgram);
 
         assertEquals(3, password);
     }
 
     @Test
     void countsOfficialExampleClicksLandingOnZero() {
-        List<DialRotation> rotations = parser.parseLines(List.of(
+        RotationProgram rotationProgram = parser.parseProgram(List.of(
                 "L68",
                 "L30",
                 "R48",
@@ -65,16 +64,16 @@ class PasswordSolverTest {
                 "L82"
         ));
 
-        int password = solver.countClicksLandingOnZero(rotations);
+        int password = new ClickPasswordSolver().solve(rotationProgram);
 
         assertEquals(6, password);
     }
 
     @Test
     void countsMultipleZeroLandingsInsideSingleLongRotation() {
-        List<DialRotation> rotations = parser.parseLines(List.of("R1000"));
+        RotationProgram rotationProgram = parser.parseProgram(List.of("R1000"));
 
-        int password = solver.countClicksLandingOnZero(rotations);
+        int password = new ClickPasswordSolver().solve(rotationProgram);
 
         assertEquals(10, password);
     }

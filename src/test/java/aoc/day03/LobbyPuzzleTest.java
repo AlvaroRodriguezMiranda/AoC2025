@@ -1,7 +1,8 @@
 package aoc.day03;
 
-import aoc.day03.battery.JoltageCalculator;
 import aoc.day03.input.BatteryBankParser;
+import aoc.day03.solver.TwelveBatteryJoltageSolver;
+import aoc.day03.solver.TwoBatteryJoltageSolver;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -11,7 +12,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class LobbyPuzzleTest {
     @Test
     void solvesOfficialExampleForPartOne() {
-        LobbyPuzzle puzzle = new LobbyPuzzle(new BatteryBankParser(), new JoltageCalculator());
+        LobbyPuzzle puzzle = new LobbyPuzzle(
+                new BatteryBankParser(),
+                new TwoBatteryJoltageSolver(),
+                new TwelveBatteryJoltageSolver()
+        );
 
         int result = puzzle.solvePartOne(List.of(
                 "987654321111111",
@@ -25,7 +30,11 @@ class LobbyPuzzleTest {
 
     @Test
     void solvesOfficialExampleForPartTwo() {
-        LobbyPuzzle puzzle = new LobbyPuzzle(new BatteryBankParser(), new JoltageCalculator());
+        LobbyPuzzle puzzle = new LobbyPuzzle(
+                new BatteryBankParser(),
+                new TwoBatteryJoltageSolver(),
+                new TwelveBatteryJoltageSolver()
+        );
 
         long result = puzzle.solvePartTwo(List.of(
                 "987654321111111",

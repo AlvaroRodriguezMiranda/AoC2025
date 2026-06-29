@@ -1,6 +1,6 @@
 # Advent of Code
 
-Este proyecto es mi práctica de Java basada en Advent of Code. Mi objetivo no es solo sacar el número correcto de cada puzzle, sino construir una solución que pueda defender en clase: código legible, nombres claros, clases con responsabilidades separadas, patrones usados con sentido y tests que demuestren que la solución funciona.
+Este proyecto es mi práctica de Java basada en Advent of Code. El objetivo no es solo sacar el número correcto de cada puzzle, sino construir una solución legible, con nombres claros, clases con responsabilidades separadas, patrones usados con sentido y tests que demuestren que la solución funciona.
 
 La idea que sigo en cada día es separar el problema en partes pequeñas. Primero modelo el dominio del puzzle, después separo el parseo de la entrada y finalmente dejo la lógica de solución en clases específicas. Así evito tener todo mezclado en una sola clase grande.
 
@@ -8,65 +8,13 @@ La idea que sigo en cada día es separar el problema en partes pequeñas. Primer
 
 ### Qué pide el problema
 
-El Día 1 trata de una caja fuerte con un dial circular numerado del 0 al 99. El dial empieza apuntando a 50 y la entrada contiene una lista de rotaciones, una por línea, con este formato:
+El Día 1 trata de una caja fuerte con un dial circular numerado del 0 al 99. El dial empieza en 50 y la entrada es una lista de instrucciones como `L68` o `R48`: la letra indica la dirección y el número indica cuántos clics se mueve.
 
-```text
-L68
-R48
-L5
-```
+En la parte 1 se cuenta cuántas rotaciones terminan exactamente en la posición 0. En la parte 2 se cuenta cada clic que cae en 0, incluso si ocurre a mitad de una rotación larga. Por eso `R1000`, empezando en 50, cuenta diez llegadas a 0.
 
-La letra indica la dirección:
+### Estructura del Día 1
 
-- `L`: girar a la izquierda, hacia números menores.
-- `R`: girar a la derecha, hacia números mayores.
-
-El número indica cuántos clics se mueve el dial. Como el dial es circular, si se pasa del 99 vuelve al 0, y si se pasa del 0 vuelve al 99.
-
-### Parte 1
-
-En la parte 1 la contraseña es la cantidad de veces que el dial termina apuntando a 0 después de completar una rotación.
-
-Esto significa que solo miro la posición final de cada instrucción. Si durante una rotación el dial pasa por 0 pero no termina ahí, eso no cuenta para la parte 1.
-
-Con el ejemplo oficial:
-
-```text
-L68
-L30
-R48
-L5
-R60
-L55
-L1
-L99
-R14
-L82
-```
-
-El resultado de la parte 1 es:
-
-```text
-3
-```
-
-### Parte 2
-
-En la parte 2 aparece el método `0x434C49434B`, que significa `CLICK`. Esto no se añade al archivo de entrada. Es una regla nueva del enunciado.
-
-La entrada sigue siendo la misma lista de rotaciones, pero ahora la contraseña se calcula contando cada clic individual que hace que el dial apunte a 0, incluso si ocurre en mitad de una rotación.
-
-Con el mismo ejemplo oficial, el resultado de la parte 2 es:
-
-```text
-6
-```
-
-También se comprueba el caso importante `R1000`: si el dial empieza en 50, esa rotación hace que el dial apunte a 0 diez veces antes de volver a 50.
-
-## Estructura del Día 1
-
-El código del Día 1 está en `aoc.day01` y lo he dividido así:
+El código está en `aoc.day01` y mantiene tres responsabilidades claras:
 
 ```text
 aoc.day01
@@ -76,542 +24,109 @@ aoc.day01
 └── password
 ```
 
-### Paquete `dial`
+En `dial` está el modelo del problema. `SafeDial` encapsula la posición del dial y sabe aplicar rotaciones. `RotationDirection` modela izquierda y derecha. `DialRotation` es el objeto de valor de una instrucción ya interpretada y ofrece `fromInstruction(...)` como factory method para construir una rotación desde texto. `RotationProgram` agrupa las rotaciones y es `Iterable<DialRotation>`, de modo que los solvers pueden recorrer el programa sin depender de la lista interna.
 
-Este paquete contiene el modelo principal del problema.
+En `input`, `RotationParser` convierte líneas de entrada en un `RotationProgram`. El parser no calcula contraseñas: solo traduce texto a objetos del dominio.
 
-`SafeDial` representa el dial circular. Guarda la posición actual y tiene la lógica para aplicar rotaciones. También contiene la lógica común que permite saber cuántos clics caen en una posición concreta, que en este puzzle es la posición 0.
+En `password`, `PasswordSolver` es la interfaz común de estrategia. `FinalPositionPasswordSolver` resuelve la parte 1 contando finales en 0. `ClickPasswordSolver` resuelve la parte 2 contando clics que caen en 0. `SecretEntrancePuzzle` coordina el caso de uso: parsea la entrada y delega en el solver correspondiente.
 
-`DialRotation` representa una instrucción ya parseada. Tiene una dirección y una distancia. Esto evita trabajar todo el rato con textos como `L68` dentro de la lógica del puzzle.
+### Patrones usados en Día 1
 
-`RotationDirection` representa las dos direcciones posibles: izquierda y derecha. Cada dirección sabe cómo aplicar su movimiento.
+Uso Strategy porque las dos partes comparten entrada y modelo, pero tienen criterios de conteo distintos. La interfaz `PasswordSolver` permite expresar esa diferencia sin meter dos algoritmos en una misma clase.
 
-### Paquete `input`
+Uso Factory Method de forma sencilla en `DialRotation.fromInstruction(...)` y `RotationDirection.fromSymbol(...)`, porque la creación desde texto pertenece al dominio de la rotación y de la dirección, no al solver.
 
-`RotationParser` se encarga de transformar líneas de texto en objetos `DialRotation`.
+Uso Iterator con `RotationProgram`, que permite recorrer las rotaciones sin exponer una colección mutable ni acoplar los solvers a la representación interna.
 
-Separé esta parte porque parsear texto no es la misma responsabilidad que resolver el puzzle. Así, si una línea está mal escrita, el error queda localizado en el parser y no en el solver.
+### Principios aplicados
 
-### Paquete `password`
+SRP aparece en la separación entre dial, parser y solvers. DRY se mantiene porque la lógica circular del dial vive en `SafeDial` y se reutiliza en ambas partes. KISS y YAGNI se respetan porque solo hay tres piezas nuevas que aportan claridad: dos estrategias y un programa iterable. La posición del dial está encapsulada y los solvers dependen de objetos de dominio, no de líneas de texto.
 
-`PasswordSolver` contiene la lógica para calcular la contraseña.
+### Tests del Día 1
 
-Ahora mismo tiene dos métodos principales:
-
-- `countRotationsEndingAtZero`: resuelve la parte 1.
-- `countClicksLandingOnZero`: resuelve la parte 2.
-
-La diferencia está en qué se cuenta. La parte 1 cuenta finales de rotación. La parte 2 cuenta clics que caen en 0.
-
-### `SecretEntrancePuzzle`
-
-Esta clase coordina el caso de uso. Recibe las líneas de entrada, usa el parser y llama al método correspondiente del solver.
-
-Tiene métodos separados para cada parte:
-
-- `solvePartOne`
-- `solvePartTwo`
-
-Así queda claro que las dos partes pertenecen al mismo día, usan la misma entrada y comparten el mismo modelo, pero no calculan exactamente lo mismo.
-
-## Patrones usados en Día 1
-
-### Factory Method
-
-Uso un Factory Method sencillo en `RotationDirection.fromSymbol`.
-
-Lo considero un Factory Method porque centraliza la creación de una dirección a partir del símbolo de entrada. El resto del código no necesita saber que `L` significa izquierda o que `R` significa derecha.
-
-Esto ayuda a que el parser sea más limpio y a que la traducción de símbolos esté en un único sitio.
-
-### Polimorfismo con `enum`
-
-En `RotationDirection`, cada valor del enum implementa su propia forma de aplicar el movimiento.
-
-La dirección `LEFT` calcula la nueva posición restando distancia, y `RIGHT` lo hace sumando distancia. Esto evita tener condicionales repetidos por el código preguntando si la dirección es izquierda o derecha.
-
-No lo presentaría como un patrón de diseño principal, pero sí como una aplicación de polimorfismo y código expresivo.
-
-### Patrones no forzados
-
-No he usado Decorator, Observer, Singleton ni Adapter en Día 1 porque no aportaban nada real a este puzzle con la estructura actual.
-
-Tampoco he usado Iterator como patrón explícito porque todavía no hay una clase propia tipo `RotationProgram` que oculte una colección interna. Si más adelante lo necesitamos para organizar mejor varios días, se puede añadir con sentido, pero ahora habría sido añadir complejidad sin necesidad.
-
-No he usado Strategy como patrón formal porque el diseño actual mantiene un solver simple. La separación entre `solvePartOne` y `solvePartTwo` ya deja claras las dos operaciones. Si el proyecto crece y cada parte necesita clases separadas, tendría sentido extraer una interfaz común para los solvers.
-
-## Principios aplicados
-
-### SRP
-
-Cada clase tiene una responsabilidad principal:
-
-- `SafeDial` modela el dial.
-- `DialRotation` representa una rotación.
-- `RotationParser` parsea la entrada.
-- `PasswordSolver` calcula la contraseña.
-- `SecretEntrancePuzzle` coordina la ejecución.
-
-Esto hace que el código sea más fácil de explicar y de probar.
-
-### DRY
-
-No dupliqué la lógica del dial para la parte 2. La parte 1 y la parte 2 reutilizan las mismas clases de dominio: `SafeDial`, `DialRotation` y `RotationDirection`.
-
-La diferencia está solo en la forma de contar la contraseña.
-
-### KISS
-
-He intentado mantener la solución simple. El puzzle no necesita una arquitectura grande ni muchos patrones. Por eso usé paquetes pequeños y clases directas.
-
-### YAGNI
-
-No añadí funcionalidades que no se pidieran. La parte 2 se implementó cuando ya tenía el enunciado. Antes de eso no tenía sentido inventar su comportamiento.
-
-### Encapsulación
-
-La posición del dial está encapsulada dentro de `SafeDial`. Desde fuera no se modifica directamente, sino mediante `rotate`.
-
-Esto protege la lógica del dial y evita que otras clases cambien su estado de cualquier forma.
-
-### Bajo acoplamiento
-
-`PasswordSolver` no trabaja con líneas de texto, sino con objetos `DialRotation`. Eso significa que la lógica de contraseña no depende del formato exacto del archivo.
-
-### Alta cohesión
-
-Cada paquete agrupa clases relacionadas:
-
-- `dial` agrupa el modelo del dial.
-- `input` agrupa el parseo.
-- `password` agrupa el cálculo de la contraseña.
-
-## Tests del Día 1
-
-He creado tests para cubrir tanto el comportamiento normal como los casos importantes.
-
-### `SafeDialTest`
-
-Comprueba:
-
-- Giro a la derecha dentro del rango.
-- Giro a la izquierda dentro del rango.
-- Paso de 0 a 99 al girar a la izquierda.
-- Paso de 99 a 0 al girar a la derecha.
-- Rechazo de una posición inicial inválida.
-- Conteo de clics que caen en 0 durante una rotación.
-- Caso largo `R1000`, que debe contar 10.
-- Que estar ya en 0 al inicio no cuenta como clic si todavía no se ha movido.
-
-### `RotationParserTest`
-
-Comprueba:
-
-- Parseo de una línea como `L68`.
-- Ignorar líneas vacías.
-- Rechazar direcciones desconocidas.
-- Rechazar distancias que no son números.
-
-### `PasswordSolverTest`
-
-Comprueba:
-
-- Ejemplo oficial de parte 1, con resultado 3.
-- Que la posición inicial no se cuenta por sí sola.
-- Rotaciones que terminan varias veces en 0.
-- Ejemplo oficial de parte 2, con resultado 6.
-- Caso `R1000`, con resultado 10.
-
-### `SecretEntrancePuzzleTest`
-
-Comprueba que la clase coordinadora llama correctamente al parser y al solver para resolver parte 1 y parte 2 desde líneas de entrada.
-
-## Cómo ejecuté los tests
-
-Los tests se ejecutan con Maven:
-
-```powershell
-mvn test
-```
-
-En mi caso, como estoy usando Java 26, también configuré Maven para usar el almacén de certificados de Windows:
-
-```powershell
-$env:MAVEN_OPTS = '-Djavax.net.ssl.trustStoreType=Windows-ROOT'
-```
-
-El resultado actual de los tests fue:
-
-```text
-Tests run: 19, Failures: 0, Errors: 0, Skipped: 0
-BUILD SUCCESS
-```
-
-## Cómo defendería el Día 1
-
-Yo explicaría que empecé identificando los conceptos del problema: hay un dial, hay rotaciones y hay una contraseña que se calcula siguiendo unas reglas.
-
-Después separé esos conceptos en clases. El dial no sabe leer archivos ni parsear texto. El parser no sabe calcular contraseñas. Y el solver no trabaja con strings, sino con rotaciones ya convertidas al modelo del dominio.
-
-Para la parte 2 no dupliqué el día ni el parser. Usé la misma entrada y el mismo modelo, porque el problema sigue siendo el mismo. Lo único que cambia es el criterio de conteo: parte 1 cuenta posiciones finales y parte 2 cuenta clics que caen en 0.
-
-También destacaría que no he metido patrones por obligación. El Factory Method sí encaja porque crear una dirección desde un símbolo de texto es una responsabilidad concreta. Otros patrones no los he usado porque ahora mismo harían el código más difícil de defender.
+Los tests cubren el ejemplo oficial de la parte 1 con resultado 3, el ejemplo oficial de la parte 2 con resultado 6, el caso `R1000`, el comportamiento circular del dial, el parseo de instrucciones y los errores de entrada. También se comprueba que la posición inicial no se cuenta por sí sola.
 
 ## Día 2: Gift Shop
 
 ### Qué pide el problema
 
-El Día 2 trata de una tienda de regalos donde se han metido IDs de producto inválidos en la base de datos. La entrada tiene varios rangos de IDs separados por comas, por ejemplo:
+El Día 2 trabaja con rangos de IDs de producto, separados por comas. Hay que sumar los IDs inválidos dentro de esos rangos.
 
-```text
-11-22,95-115,998-1012
-```
-
-Cada rango tiene un primer ID y un último ID separados por un guion. La parte 1 pide encontrar todos los IDs inválidos dentro de esos rangos y sumarlos.
-
-Un ID es inválido si está formado por una secuencia de dígitos repetida dos veces. Por ejemplo:
-
-- `55` es inválido porque es `5` repetido dos veces.
-- `6464` es inválido porque es `64` repetido dos veces.
-- `123123` es inválido porque es `123` repetido dos veces.
-
-En cambio, `101` no cuenta porque no tiene dos mitades iguales. Además, el enunciado dice que los IDs no tienen ceros a la izquierda.
-
-Con el ejemplo oficial, el resultado de la parte 1 es:
-
-```text
-1227775554
-```
-
-### Parte 2
-
-En la parte 2 la regla se amplía. Ahora un ID es inválido si está formado por una secuencia de dígitos repetida al menos dos veces, no solo exactamente dos veces.
-
-Por ejemplo:
-
-- `12341234` es inválido porque `1234` se repite dos veces.
-- `123123123` es inválido porque `123` se repite tres veces.
-- `1212121212` es inválido porque `12` se repite cinco veces.
-- `1111111` es inválido porque `1` se repite siete veces.
-
-La entrada no cambia. Se usan los mismos rangos que en la parte 1, pero cambia la regla para decidir si un ID es inválido.
-
-Con el ejemplo oficial, el resultado de la parte 2 es:
-
-```text
-4174379265
-```
+En la parte 1 un ID es inválido si está formado por dos mitades iguales, por ejemplo `55`, `6464` o `123123`. En la parte 2 la regla se amplía: el ID es inválido si está formado por una secuencia repetida dos o más veces, por ejemplo `123123123` o `1212121212`.
 
 ### Estructura del Día 2
 
-El código del Día 2 está en `aoc.day02` y lo he dividido así:
+El código está en `aoc.day02`:
 
 ```text
 aoc.day02
 ├── GiftShopPuzzle.java
 ├── input
-└── product
+├── product
+└── solver
 ```
 
-### Paquete `product`
+En `input`, `ProductRangeParser` convierte la línea de entrada en objetos `ProductIdRange`.
 
-Este paquete contiene el dominio del problema.
+En `product`, `ProductIdRange` representa un rango cerrado y valida que sus límites sean positivos y estén ordenados. `RepeatedPatternProductId` concentra operaciones de dominio para construir y comprobar IDs repetidos.
 
-`ProductIdRange` representa un rango de IDs. Guarda el primer ID y el último ID, valida que el rango tenga sentido y ofrece el método `contains` para saber si un ID está dentro.
+En `solver`, `InvalidProductIdRule` es la estrategia de regla inválida. `DoublePatternInvalidProductIdRule` implementa la regla de la parte 1. `RepeatedPatternInvalidProductIdRule` implementa la regla de la parte 2 y mantiene un `Set<Long>` para evitar sumar dos veces el mismo ID cuando puede generarse con más de una longitud de secuencia. `ProductIdSumCalculator` recibe una regla y suma los IDs inválidos producidos por ella.
 
-`RepeatedPatternProductId` contiene la regla que decide si un ID es inválido. La regla está separada porque no es responsabilidad del rango saber cómo se detecta el patrón repetido.
-
-`ProductIdSumCalculator` calcula la suma de los IDs inválidos dentro de una lista de rangos. Para la parte 1 usa la regla de dos mitades iguales. Para la parte 2 usa la regla más general de una secuencia repetida dos o más veces.
-
-### Paquete `input`
-
-`ProductRangeParser` convierte la línea de entrada en objetos `ProductIdRange`.
-
-La entrada viene como una sola línea larga separada por comas, así que el parser se encarga de dividirla y validar cada rango. De esta forma, el solver no depende del formato exacto del texto.
-
-### `GiftShopPuzzle`
-
-`GiftShopPuzzle` coordina el caso de uso del Día 2. Recibe la línea de entrada, usa el parser y después llama al calculador de suma.
-
-También tiene un `main` para poder ejecutar el día usando:
-
-```text
-src/main/resources/day02/input.txt
-```
-
-### Decisión de algoritmo
-
-Para Día 2 no recorro todos los números de cada rango uno por uno. Eso podría ser muy lento si un rango es grande.
-
-En la parte 1 genero candidatos que ya tienen forma de patrón repetido dos veces. Por ejemplo, si la mitad es `123`, construyo `123123`. Luego solo compruebo si ese número cae dentro del rango.
-
-En la parte 2 hago lo mismo pero con repeticiones de dos o más veces. Por ejemplo, puedo generar `123123123` usando la secuencia `123` repetida tres veces.
-
-También tengo en cuenta que un mismo ID puede tener más de una interpretación. Por ejemplo, `111111` puede verse como `1` repetido seis veces, `11` repetido tres veces o `111` repetido dos veces. Para no sumarlo varias veces, guardo los IDs inválidos encontrados en un `Set`.
-
-Esta decisión mantiene el código entendible, pero evita hacer trabajo innecesario.
+`GiftShopPuzzle` coordina el flujo: parsea rangos y usa un calculador para cada parte.
 
 ### Patrones usados en Día 2
 
-En Día 2 no he forzado patrones de diseño.
-
-El parser separa la creación de objetos `ProductIdRange` desde texto, pero no lo presentaría como un Factory Method formal porque no hay una jerarquía ni una fábrica clara como tal. Es simplemente una clase de parsing con una responsabilidad concreta.
-
-Tampoco he usado Iterator, Decorator, Adapter, Observer o Singleton porque no aportan nada real a este puzzle en su estado actual. En la defensa diría que preferí aplicar bien SRP, DRY y KISS antes que meter patrones artificiales.
+Uso Strategy porque las reglas de invalidez cambian entre partes, pero el cálculo de suma es el mismo. `ProductIdSumCalculator` no necesita saber si se está aplicando la regla doble o la regla de secuencia repetida.
 
 ### Principios aplicados
 
-### SRP
+SRP queda claro: parsear rangos, representar rangos, generar IDs inválidos y sumar resultados son responsabilidades separadas. DRY aparece en `ProductIdSumCalculator`, que reutiliza el mismo flujo de suma para ambas reglas. KISS se mantiene porque las reglas siguen siendo clases pequeñas. No se hace fuerza bruta sobre rangos enormes; se generan candidatos repetidos y se comprueba si caen dentro del rango. El `Set` de la parte 2 se conserva porque evita duplicados reales.
 
-Cada clase tiene una responsabilidad clara:
+### Tests del Día 2
 
-- `ProductIdRange` representa rangos.
-- `RepeatedPatternProductId` detecta el patrón inválido.
-- `ProductRangeParser` parsea la entrada.
-- `ProductIdSumCalculator` suma los IDs inválidos.
-- `GiftShopPuzzle` coordina el caso de uso.
-
-La parte 1 y la parte 2 están separadas en métodos distintos dentro del mismo flujo del Día 2. Siguen usando el mismo parser y el mismo modelo de rangos.
-
-### DRY
-
-La lógica para detectar IDs repetidos está en `RepeatedPatternProductId`, no repetida en tests, parser o solver.
-
-### KISS
-
-La estructura es pequeña y directa. No he creado interfaces ni abstracciones extra porque todavía no hacen falta.
-
-### YAGNI
-
-Solo está implementada la parte 1. No he añadido parte 2 porque todavía no tengo su enunciado.
-
-### Encapsulación
-
-`ProductIdRange` valida su propio estado y ofrece `contains`, así que el resto del código no necesita repetir cómo se comprueba si un ID pertenece a un rango.
-
-### Bajo acoplamiento
-
-`ProductIdSumCalculator` trabaja con objetos `ProductIdRange`, no con la línea original de texto. Así la lógica del cálculo queda separada del formato de entrada.
-
-### Alta cohesión
-
-El paquete `product` solo trata conceptos de producto e IDs. El paquete `input` solo trata el parseo.
-
-## Tests del Día 2
-
-### `GiftShopPuzzleTest`
-
-Comprueba:
-
-- El ejemplo oficial completo de la parte 1, con resultado `1227775554`.
-- El ejemplo oficial completo de la parte 2, con resultado `4174379265`.
-
-### `ProductRangeParserTest`
-
-Comprueba:
-
-- Parseo de un rango simple.
-- Parseo de varios rangos separados por comas.
-- Que se ignore una coma final si aparece.
-- Rechazo de formatos inválidos.
-- Rechazo de entrada vacía.
-
-### `ProductIdRangeTest`
-
-Comprueba:
-
-- Que `contains` funciona para IDs dentro y fuera del rango.
-- Que no se permite un rango donde el inicio sea mayor que el final.
-
-### `RepeatedPatternProductIdTest`
-
-Comprueba:
-
-- IDs inválidos como `55`, `6464` y `123123`.
-- IDs válidos que deben ignorarse, como `101`, `123124` y números con longitud impar.
-- IDs inválidos de parte 2 como `12341234`, `123123123`, `1212121212` y `1111111`.
-
-### `ProductIdSumCalculatorTest`
-
-Comprueba:
-
-- La suma de IDs inválidos en rangos pequeños del ejemplo.
-- Un rango que no contiene ningún ID inválido.
-- La suma con la regla ampliada de parte 2.
-- Que un mismo ID como `111111` no se sume dos veces aunque pueda generarse con distintas secuencias.
-
-## Cómo defendería el Día 2
-
-Yo explicaría que primero separé el formato de entrada del cálculo. El parser convierte el texto en rangos y después el calculador trabaja con objetos del dominio.
-
-También explicaría que el criterio de invalidez está aislado en una clase propia. Cuando apareció la parte 2, pude ampliar esa regla sin tocar el parser ni el rango.
-
-La parte más importante del algoritmo es que no reviso todos los IDs del rango. Genero directamente IDs con forma repetida y compruebo si están dentro. Esto respeta KISS porque sigue siendo fácil de entender, pero también evita un recorrido innecesario.
-
-Para la parte 2 destacaría que reutilizo el mismo input, el mismo parser y el mismo modelo. Solo cambia la regla de detección de IDs inválidos. Eso respeta DRY y SRP.
-
-Por último, diría que no he usado patrones solo por decorar el proyecto. En Día 2 la mejora real está en la separación de responsabilidades, el bajo acoplamiento y los tests.
+Los tests cubren el ejemplo oficial de parte 1 con resultado `1227775554` y el de parte 2 con resultado `4174379265`. También prueban rangos pequeños, ausencia de IDs inválidos, detección de patrones repetidos y prevención de duplicados como `111111`.
 
 ## Día 3: Vestíbulo
 
 ### Qué pide el problema
 
-El Día 3 trata de unos bancos de baterías. Cada línea de la entrada representa un banco y cada dígito es la potencia de una batería, siempre entre 1 y 9.
+El Día 3 trabaja con bancos de baterías. Cada línea contiene dígitos del 1 al 9 y hay que formar el mayor número posible eligiendo baterías sin cambiar su orden original.
 
-En la parte 1 hay que encender exactamente dos baterías de cada banco. El número de descarga se forma con los dos dígitos elegidos, respetando el orden en el que aparecen.
+En la parte 1 se eligen dos baterías. En la parte 2 se eligen doce baterías, por lo que el resultado puede superar `int` y se usa `long`.
 
-Por ejemplo, en un banco `12345`, si elijo las baterías `2` y `4`, la descarga es `24`. No puedo cambiar el orden de las baterías.
-
-Con el ejemplo oficial:
-
-```text
-987654321111111
-811111111111119
-234234234234278
-818181911112111
-```
-
-Las mejores descargas son `98`, `89`, `78` y `92`, así que el total es:
-
-```text
-357
-```
-
-### Parte 2
-
-En la parte 2 la idea es la misma, pero ahora hay que encender exactamente doce baterías de cada banco.
-
-La descarga ya no tiene dos dígitos, sino doce. Por eso en el código uso `long` para esta parte, porque los resultados son mucho más grandes que en la parte 1.
-
-Con el mismo ejemplo oficial, las mejores descargas son:
-
-```text
-987654321111
-811111111119
-434234234278
-888911112111
-```
-
-La suma total es:
-
-```text
-3121910778619
-```
+La regla importante es que no se ordenan los dígitos. La solución mantiene la lógica voraz: para cada posición del resultado se busca el mayor dígito posible dejando suficientes baterías para completar las posiciones restantes.
 
 ### Estructura del Día 3
 
-El código del Día 3 está en `aoc.day03` y lo he dividido así:
+El código está en `aoc.day03`:
 
 ```text
 aoc.day03
 ├── LobbyPuzzle.java
 ├── battery
-└── input
+├── input
+└── solver
 ```
 
-### Paquete `battery`
+En `battery`, `BatteryBank` encapsula los dígitos disponibles y contiene el método `maximumJoltageUsingBatteries(...)`, que implementa la selección voraz preservando el orden.
 
-`BatteryBank` representa un banco de baterías. Guarda las potencias y calcula la descarga máxima posible eligiendo una cantidad concreta de baterías en orden. Para la parte 1 se usan dos baterías y para la parte 2 se usan doce.
+En `input`, `BatteryBankParser` transforma cada línea en un `BatteryBank` y valida que los caracteres sean dígitos válidos del 1 al 9.
 
-`JoltageCalculator` suma la mejor descarga de todos los bancos. Tiene un método para parte 1 y otro método que recibe cuántas baterías se deben elegir.
+En `solver`, `JoltageSolver` es la interfaz común. `TwoBatteryJoltageSolver` resuelve la parte 1 y `TwelveBatteryJoltageSolver` resuelve la parte 2. Ambos reutilizan la misma lógica del modelo y solo fijan cuántas baterías se eligen.
 
-### Paquete `input`
-
-`BatteryBankParser` convierte cada línea de texto en un `BatteryBank`. También valida que cada carácter sea un dígito entre 1 y 9.
-
-### `LobbyPuzzle`
-
-`LobbyPuzzle` coordina el Día 3. Recibe las líneas de entrada, usa el parser y llama al calculador.
-
-También tiene un `main` que lee:
-
-```text
-src/main/resources/day03/input.txt
-```
+`LobbyPuzzle` coordina parser y solvers.
 
 ### Patrones usados en Día 3
 
-No he usado un patrón de diseño formal en Día 3 porque la regla sigue siendo bastante directa. Lo importante aquí era separar bien responsabilidades y no complicar el código.
-
-No he usado Factory Method porque la creación del banco desde texto está en un parser simple. Tampoco he usado Iterator, Decorator, Adapter o Singleton porque no aportan claridad a este caso.
+Uso Strategy de forma moderada para separar el solver de dos baterías y el solver de doce baterías. La interfaz común `JoltageSolver` mantiene el punto de entrada igual para las dos partes.
 
 ### Principios aplicados
 
-### SRP
+SRP separa parseo, modelo y cálculo por parte. DRY queda en `BatteryBank.maximumJoltageUsingBatteries(...)`, que evita duplicar el algoritmo para 2 y 12 baterías. KISS se mantiene con una estrategia por parte y un único algoritmo voraz. YAGNI mantiene el diseño centrado en lo que pide el problema. La encapsulación protege la lista interna de baterías mediante copia defensiva.
 
-Cada clase tiene una responsabilidad clara:
+### Tests del Día 3
 
-- `BatteryBank` modela un banco y calcula su mejor descarga.
-- `BatteryBankParser` convierte texto en bancos.
-- `JoltageCalculator` suma resultados.
-- `LobbyPuzzle` coordina el flujo del día.
-
-### DRY
-
-La regla para calcular la mejor descarga de un banco está solo en `BatteryBank`. La parte 1 y la parte 2 reutilizan el mismo método general cambiando solo la cantidad de baterías que se eligen.
-
-### KISS
-
-La solución elige la mejor secuencia respetando el orden. Para cada posición del resultado busca el mejor dígito posible dejando suficientes baterías para completar el resto. Es una forma simple de resolver tanto parte 1 como parte 2 sin duplicar algoritmos.
-
-### YAGNI
-
-La parte 2 se implementó cuando ya tenía el enunciado. Antes de eso no había añadido comportamiento inventado.
-
-### Encapsulación
-
-`BatteryBank` guarda internamente la lista de potencias usando una copia. Desde fuera no se puede modificar esa lista.
-
-### Bajo acoplamiento
-
-`JoltageCalculator` trabaja con objetos `BatteryBank`, no con strings de entrada. El parseo queda separado de la lógica del cálculo.
-
-### Alta cohesión
-
-El paquete `battery` trata solo conceptos de baterías y descargas. El paquete `input` trata solo el parseo.
-
-## Tests del Día 3
-
-### `LobbyPuzzleTest`
-
-Comprueba:
-
-- El ejemplo oficial de parte 1, con resultado `357`.
-- El ejemplo oficial de parte 2, con resultado `3121910778619`.
-
-### `BatteryBankTest`
-
-Comprueba:
-
-- Que se encuentra la mejor descarga en un banco descendente como `9876`.
-- Que se respeta el orden original de las baterías.
-- Que se encuentra la mejor descarga usando doce baterías.
-- Que el algoritmo de doce baterías respeta el orden.
-- Que no se permite un banco con menos de dos baterías.
-- Que no se permite pedir más baterías de las que tiene el banco.
-
-### `JoltageCalculatorTest`
-
-Comprueba que se suman correctamente las mejores descargas de varios bancos, tanto con la regla de parte 1 como con una cantidad configurable de baterías.
-
-### `BatteryBankParserTest`
-
-Comprueba:
-
-- Parseo de una línea válida.
-- Ignorar líneas vacías.
-- Rechazo de `0`, porque el enunciado solo permite valores de 1 a 9.
-- Rechazo de caracteres que no sean dígitos.
-
-## Cómo defendería el Día 3
-
-Yo explicaría que separé el problema en dos ideas: un banco sabe calcular su mejor descarga, y otro objeto suma las descargas de todos los bancos.
-
-También diría que el parser está separado porque leer caracteres no es la misma responsabilidad que calcular la descarga máxima. Así puedo probar el modelo sin depender de la entrada.
-
-Para la parte 2 no dupliqué el algoritmo. Generalicé el cálculo para elegir una cantidad concreta de baterías. Parte 1 llama a ese cálculo con 2 y parte 2 con 12. Esto respeta DRY y mantiene el diseño fácil de defender.
-
-En este día no he metido patrones artificiales. La parte importante es que el diseño sigue siendo simple, cohesivo y fácil de probar.
+Los tests cubren los ejemplos oficiales: parte 1 con resultado `357` y parte 2 con resultado `3121910778619`. También verifican que el algoritmo respeta el orden original, que no ordena los dígitos, que funciona con doce baterías y que rechaza bancos o cantidades inválidas.
 
 ## Día 4: Printing Department
 
@@ -692,12 +207,6 @@ También tiene un `main` que lee:
 src/main/resources/day04/input.txt
 ```
 
-### Patrones usados en Día 4
-
-No he usado un patrón de diseño formal en Día 4 porque la parte 1 se resuelve mejor con un modelo de cuadrícula claro y un solver pequeño.
-
-No he usado Factory Method porque no hay creación compleja de objetos. Tampoco he usado Iterator, Decorator, Adapter o Singleton porque no aportan claridad a esta solución.
-
 ### Principios aplicados
 
 ### SRP
@@ -769,16 +278,6 @@ Comprueba:
 - Que los rollos con menos de cuatro vecinos se cuentan como accesibles.
 - Que un rollo con cuatro vecinos no se cuenta como accesible.
 - Que las retiradas se acumulan correctamente durante varias rondas.
-
-## Cómo defendería el Día 4
-
-Yo explicaría que separé el mapa de la regla de acceso. La cuadrícula sabe contar vecinos, pero no decide por sí sola qué significa ser accesible. Esa regla está en `ForkliftAccessSolver`.
-
-También diría que el parser está separado porque validar caracteres y construir la cuadrícula no debe mezclarse con la lógica del puzzle.
-
-Para la parte 2 reutilicé la misma regla de accesibilidad, pero aplicada varias veces. En vez de mezclar la mutación directamente con el mapa original, `PaperRollGrid` puede crear una nueva cuadrícula sin los rollos retirados. Así el comportamiento es más fácil de probar.
-
-En este día no he usado patrones artificiales. Lo más importante es que la solución tiene responsabilidades claras, bajo acoplamiento y tests que cubren tanto el ejemplo oficial como los casos de borde.
 
 ## Día 5: Cafeteria
 
@@ -864,14 +363,6 @@ También tiene un `main` que lee:
 src/main/resources/day05/input.txt
 ```
 
-### Patrones usados en Día 5
-
-No he usado un patrón de diseño formal en Día 5 porque la parte 1 se entiende mejor con clases pequeñas y directas.
-
-El parser crea objetos del dominio desde texto, pero no lo presentaría como Factory Method formal porque no hay una familia de objetos ni una fábrica clara. Es una responsabilidad de parsing.
-
-Tampoco he usado Iterator, Decorator, Adapter o Singleton porque no aportan nada real al problema actual.
-
 ### Principios aplicados
 
 ### SRP
@@ -942,14 +433,6 @@ Comprueba:
 - Conteo total de IDs frescos fusionando rangos solapados.
 - Conteo de rangos separados.
 - Conteo de rangos adyacentes como una zona continua.
-
-## Cómo defendería el Día 5
-
-Yo explicaría que separé la estructura del archivo de la regla del problema. El parser convierte el texto en una base de datos del dominio, y después el contador trabaja con esa base de datos.
-
-También destacaría que los rangos solapados no duplican ingredientes. En parte 1 el contador pregunta si un ID está en algún rango, no cuántos rangos lo contienen. En parte 2 se fusionan rangos para contar cada ID fresco una sola vez.
-
-No he usado patrones artificiales. En este día lo más importante es SRP, bajo acoplamiento y tests claros sobre el ejemplo oficial y los casos de solapamiento.
 
 ## Día 6: Trash Compactor
 
@@ -1042,11 +525,7 @@ src/main/resources/day06/input.txt
 
 ### Patrones usados en Día 6
 
-No he usado patrones complejos. Sí hay polimorfismo en `MathOperation`, porque cada operación implementa su forma de calcular el resultado.
-
 `MathOperation.fromSymbol` funciona como un Factory Method sencillo, porque centraliza cómo se convierte `+` o `*` en una operación del dominio.
-
-No he usado Iterator, Decorator, Adapter o Singleton porque no aportaban claridad a este puzzle.
 
 ### Principios aplicados
 
@@ -1116,16 +595,6 @@ Comprueba:
 ### `WorksheetSolverTest`
 
 Comprueba que se suman correctamente los resultados de varios problemas.
-
-## Cómo defendería el Día 6
-
-Yo explicaría que la dificultad principal no es la operación matemática, sino leer bien la hoja. Por eso separé el parser del solver.
-
-El parser entiende el formato visual y convierte la entrada en problemas del dominio. Después el solver ya no trabaja con columnas ni espacios, solo con `MathProblem`.
-
-Para la parte 2 explicaría que no cambié el solver matemático, porque sumar y multiplicar problemas ya estaba resuelto. Lo que cambió fue la interpretación del texto. Por eso añadí otro método de parseo en `WorksheetParser`.
-
-También destacaría el uso de `MathOperation`: evita condicionales repartidos por el código y deja cada operación en un sitio claro.
 
 ## Día 7: Laboratories
 
@@ -1207,12 +676,6 @@ También tiene un `main` que lee:
 src/main/resources/day07/input.txt
 ```
 
-### Patrones usados en Día 7
-
-No he usado un patrón de diseño formal en este día porque el problema se entiende mejor con un modelo de mapa y un solver directo.
-
-No he usado Factory Method porque la creación del manifold desde texto está en un parser simple. Tampoco he usado Decorator, Adapter, Iterator o Singleton porque no aportaban claridad para esta parte.
-
 ### Principios aplicados
 
 ### SRP
@@ -1286,16 +749,6 @@ Comprueba:
 - Que sin splitters sigue existiendo una sola línea temporal.
 - Que un splitter crea dos líneas temporales.
 - Que varias líneas temporales que llegan a la misma columna se suman, no se eliminan.
-
-## Cómo defendería el Día 7
-
-Yo explicaría que separé el dibujo del manifold de la regla de propagación. El parser solo entiende texto y valida el formato. El manifold representa el mapa. El contador ya trabaja con ese modelo y no necesita saber cómo venía escrito el archivo.
-
-También destacaría que uso un `Set` para las columnas activas porque, si dos haces llegan al mismo sitio, desde ahí tienen el mismo comportamiento. Eso evita duplicar trabajo y refleja bien lo que dice el enunciado cuando varios haces acaban en una misma zona.
-
-Para la parte 2 explicaría que cambié el `Set` por un `Map`, porque ahora no solo importa dónde hay partícula, sino cuántas líneas temporales llegan a ese sitio. Esa diferencia justifica tener dos clases distintas: `TachyonSplitterCounter` para parte 1 y `QuantumTimelineCounter` para parte 2.
-
-No he metido patrones artificiales. En este día lo más importante es SRP, bajo acoplamiento y un algoritmo sencillo que se puede explicar paso a paso.
 
 ## Día 8: Playground
 
@@ -1380,12 +833,6 @@ También tiene un `main` que lee:
 src/main/resources/day08/input.txt
 ```
 
-### Patrones usados en Día 8
-
-No he usado un patrón formal porque la solución se entiende mejor con un modelo de dominio y una estructura de unión de conjuntos.
-
-No he usado Factory Method, Decorator, Adapter, Iterator o Singleton porque no aportaban claridad a este puzzle. En este caso era más importante mantener el algoritmo claro.
-
 ### Principios aplicados
 
 ### SRP
@@ -1456,18 +903,6 @@ Comprueba:
 - Que se rechaza calcular el producto si hay menos de tres cajas.
 - Que se devuelve el producto de las coordenadas `X` de la conexión que deja un solo circuito.
 - Que parte 2 rechaza una lista con menos de dos cajas.
-
-## Cómo defendería el Día 8
-
-Yo explicaría que el problema se parece a ir formando componentes conectados. Por eso separé las cajas, las conexiones y la red de circuitos.
-
-La parte clave es `CircuitNetwork`: cuando conecto dos cajas, no necesito guardar todas las conexiones explícitamente, sino saber qué cajas pertenecen al mismo circuito. Para eso uso unión de conjuntos, que es una forma sencilla y eficiente de mantener grupos.
-
-También explicaría que uso distancia al cuadrado para evitar cálculos innecesarios con raíces cuadradas. El orden de cercanía se mantiene igual y el código queda más directo.
-
-Para la parte 2 diría que reutilicé la misma lista ordenada de conexiones. La diferencia es que ahora necesito saber si una conexión realmente une dos circuitos distintos. Por eso `CircuitNetwork.connect` devuelve si la unión cambió la red. Cuando esa unión deja un solo circuito, guardo esa conexión y multiplico sus coordenadas `X`.
-
-No he forzado patrones de diseño. En este día la defensa se centra más en SRP, encapsulación, bajo acoplamiento y en elegir una estructura de datos adecuada.
 
 ## Día 9: Movie Theater
 
@@ -1545,12 +980,6 @@ También tiene un `main` que lee:
 src/main/resources/day09/input.txt
 ```
 
-### Patrones usados en Día 9
-
-No he usado patrones de diseño formales en este día. El problema es directo y se entiende mejor con un modelo pequeño y un solver claro.
-
-No he usado Factory Method, Decorator, Adapter, Iterator o Singleton porque no aportaban claridad. En este caso preferí aplicar bien SRP, KISS y nombres claros.
-
 ### Principios aplicados
 
 ### SRP
@@ -1622,16 +1051,6 @@ Comprueba:
 - Que funcionan rectángulos finos de una sola fila.
 - Que se encuentra el área más grande dentro de la zona roja/verde.
 - Que se rechaza una lista con menos de dos baldosas rojas.
-
-## Cómo defendería el Día 9
-
-Yo explicaría que primero separé la lectura de la entrada del cálculo. El parser convierte texto en baldosas rojas y el solver ya trabaja con objetos del dominio.
-
-También destacaría que la regla importante está en `RedTile`: el área se calcula con `+1` en anchura y altura porque las esquinas también forman parte del rectángulo. Eso evita errores típicos de contar solo la diferencia entre coordenadas.
-
-Para la parte 2 explicaría que construyo la zona válida a partir del camino cerrado. Primero marco el borde que une las baldosas rojas y luego relleno desde fuera; lo que no es exterior queda dentro del bucle y por tanto es rojo o verde. Como el input real tiene coordenadas grandes, uso compresión de coordenadas para no recorrer una cuadrícula enorme.
-
-No he añadido patrones innecesarios. En este día la solución se defiende por su claridad: modelo pequeño, parser separado, fórmula encapsulada y tests sobre el ejemplo oficial y casos de borde.
 
 ## Día 10: Factory
 
@@ -1717,12 +1136,6 @@ Uso máscaras de bits porque las luces solo tienen dos estados: encendida o apag
 
 Para la parte 2 uso otra idea. Cada botón suma `1` a algunos contadores, así que el problema se puede ver como un sistema de ecuaciones: cuántas veces pulso cada botón para llegar exactamente a los requisitos. Reduzco el sistema lineal, enumero las pocas variables libres que quedan y compruebo soluciones enteras no negativas.
 
-### Patrones usados en Día 10
-
-No he usado patrones de diseño formales. El problema se resuelve mejor con un modelo pequeño y una búsqueda clara.
-
-No he usado Factory Method, Adapter, Decorator, Iterator o Singleton porque no aportaban claridad a esta parte.
-
 ### Principios aplicados
 
 ### SRP
@@ -1790,16 +1203,6 @@ Comprueba:
 - Que no se permite una máquina sin botones.
 - Que se encuentra el mínimo de pulsaciones de voltaje.
 - Que si los requisitos de voltaje ya son cero, el mínimo es `0`.
-
-## Cómo defendería el Día 10
-
-Yo explicaría que el problema tiene luces con dos estados, así que modelarlo con bits es natural. Una luz encendida es un bit a `1` y una apagada es un bit a `0`.
-
-También diría que pulsar un botón equivale a hacer XOR con su máscara. Eso expresa directamente la idea de alternar luces: si una luz estaba apagada se enciende, y si estaba encendida se apaga.
-
-Para la parte 2 explicaría que no reutilizo BFS porque los voltajes pueden ser grandes. En su lugar, trato cada botón como una variable: si pulso el botón `x` veces, suma `x` a los contadores que afecta. Así puedo reducir el sistema y buscar solo soluciones enteras válidas.
-
-Separé el parser del cálculo porque leer líneas como `[.##.] (3) (0,2)` no es la misma responsabilidad que buscar el mínimo de pulsaciones. Así puedo probar el algoritmo con objetos ya construidos y probar el parser por separado.
 
 ## Día 11: Reactor
 
@@ -1871,10 +1274,6 @@ También tiene un `main` que lee:
 src/main/resources/day11/input.txt
 ```
 
-### Patrones usados en Día 11
-
-No he usado patrones de diseño formales. El problema encaja mejor con una estructura de grafo sencilla y un contador separado.
-
 ### Principios aplicados
 
 ### SRP
@@ -1943,14 +1342,6 @@ Comprueba:
 - Rechazo de dispositivo inicial inexistente.
 - Detección de ciclos para evitar recursión infinita.
 
-## Cómo defendería el Día 11
-
-Yo explicaría que el problema es un grafo dirigido: cada dispositivo es un nodo y cada salida es una arista.
-
-Separé el parser del contador porque leer el formato `aaa: bbb ccc` no es lo mismo que recorrer la red. El contador usa memoización porque si varios caminos llegan al mismo dispositivo, la cantidad de caminos desde ahí hasta `out` es siempre la misma y no hace falta recalcularla.
-
-Para la parte 2 explicaría que no enumero las rutas completas. Solo guardo tres cosas: en qué dispositivo estoy, si ya pasé por `dac` y si ya pasé por `fft`. Con eso se puede contar de forma eficiente y sigue siendo fácil de defender.
-
 ## Día 12: Christmas Tree Farm
 
 ### Qué pide el problema
@@ -1986,9 +1377,7 @@ La parte 1 pide contar cuántas regiones pueden encajar todos los regalos que ti
 
 ### Parte 2
 
-La parte 2 de este día no añade un cálculo nuevo. El texto que aparece después de la parte 1 es narrativo y no pide procesar el input otra vez ni obtener otra respuesta numérica.
-
-Por eso no he creado un solver separado para parte 2. En este caso, el Día 12 queda completo con la solución de la parte 1.
+La parte 2 de este día no añade un cálculo nuevo. El texto que aparece después de la parte 1 es narrativo y no pide procesar el input otra vez ni obtener otra respuesta numérica. Con la solución de la parte 1, el Día 12 queda completo.
 
 ### Estructura del Día 12
 
@@ -2037,12 +1426,6 @@ Después uso backtracking. En cada paso elijo una forma que todavía queda por c
 
 No simulo los puntos `.` como si ocuparan espacio, porque el enunciado dice que esos huecos no bloquean a otros regalos.
 
-### Patrones usados en Día 12
-
-No he usado un patrón de diseño formal en este día. El problema se entiende mejor como un modelo de dominio pequeño más un algoritmo de búsqueda.
-
-No he forzado Factory Method, Decorator, Adapter, Iterator o Singleton porque no aportaban claridad aquí. En la defensa diría que la decisión importante fue separar responsabilidades y usar una representación eficiente para las celdas ocupadas.
-
 ### Principios aplicados
 
 ### SRP
@@ -2065,11 +1448,9 @@ El parser está separado, así que no se repite el tratamiento del formato de en
 
 Aunque el problema es más difícil que otros días, la solución sigue una idea defendible: generar colocaciones válidas y probar combinaciones sin solapamiento.
 
-No he metido una arquitectura grande ni clases innecesarias.
-
 ### YAGNI
 
-Solo está implementada la parte 1 porque la parte 2 no pide una regla nueva. No he preparado una parte 2 inventada porque sería añadir comportamiento que el problema no necesita.
+Solo está implementada la parte 1 porque la parte 2 no pide una regla nueva.
 
 ### Encapsulación
 
@@ -2113,13 +1494,3 @@ Comprueba:
 - Que dos regalos de la forma del ejemplo pueden caber en una región `4x4`.
 - Que se rechaza una región si el área total necesaria es demasiado grande.
 - Que se rechaza una forma que no puede colocarse dentro de una región por sus dimensiones.
-
-## Cómo defendería el Día 12
-
-Yo explicaría que primero separé el problema en tres ideas: formas de regalos, regiones debajo de los árboles y una clase que comprueba si el conjunto puede colocarse.
-
-También destacaría que las rotaciones y volteos están dentro de `PresentShape`, porque pertenecen al concepto de forma. El solver no debería saber los detalles matemáticos de cada transformación.
-
-Para el algoritmo explicaría que cada posible colocación se convierte en un conjunto de celdas ocupadas. Si dos conjuntos se cruzan, esos regalos se solapan y esa combinación no vale. Esto hace que el backtracking sea más claro y evita trabajar con matrices copiadas muchas veces.
-
-Por último, diría que no he usado patrones solo por cumplir. En este día la parte defendible está en SRP, encapsulación, bajo acoplamiento y en tener tests que prueban tanto el ejemplo oficial como casos importantes de error.

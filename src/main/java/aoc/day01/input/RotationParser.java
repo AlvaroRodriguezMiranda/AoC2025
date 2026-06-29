@@ -1,39 +1,25 @@
 package aoc.day01.input;
 
 import aoc.day01.dial.DialRotation;
-import aoc.day01.dial.RotationDirection;
+import aoc.day01.dial.RotationProgram;
 
 import java.util.List;
 
 public final class RotationParser {
-    public List<DialRotation> parseLines(List<String> lines) {
-        return lines.stream()
+    public RotationProgram parseProgram(List<String> lines) {
+        List<DialRotation> rotations = lines.stream()
                 .map(String::trim)
                 .filter(line -> !line.isEmpty())
-                .map(this::parseLine)
+                .map(DialRotation::fromInstruction)
                 .toList();
+        return new RotationProgram(rotations);
+    }
+
+    public List<DialRotation> parseLines(List<String> lines) {
+        return parseProgram(lines).asList();
     }
 
     public DialRotation parseLine(String line) {
-        if (line == null) {
-            throw new IllegalArgumentException("Rotation line must contain a direction and a distance");
-        }
-
-        String trimmedLine = line.trim();
-        if (trimmedLine.length() < 2) {
-            throw new IllegalArgumentException("Rotation line must contain a direction and a distance");
-        }
-
-        RotationDirection direction = RotationDirection.fromSymbol(trimmedLine.charAt(0));
-        int distance = parseDistance(trimmedLine.substring(1));
-        return new DialRotation(direction, distance);
-    }
-
-    private int parseDistance(String text) {
-        try {
-            return Integer.parseInt(text);
-        } catch (NumberFormatException exception) {
-            throw new IllegalArgumentException("Rotation distance must be a number: " + text, exception);
-        }
+        return DialRotation.fromInstruction(line);
     }
 }

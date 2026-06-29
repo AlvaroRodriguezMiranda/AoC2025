@@ -1,17 +1,16 @@
-package aoc.day03.battery;
+package aoc.day03.solver;
 
+import aoc.day03.battery.BatteryBank;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class JoltageCalculatorTest {
+class TwoBatteryJoltageSolverTest {
     @Test
     void sumsMaximumJoltageForAllBanks() {
-        JoltageCalculator calculator = new JoltageCalculator();
-
-        int result = calculator.totalMaximumJoltage(List.of(
+        long result = new TwoBatteryJoltageSolver().solve(List.of(
                 new BatteryBank(List.of(9, 8, 7)),
                 new BatteryBank(List.of(1, 2, 3))
         ));
@@ -21,12 +20,10 @@ class JoltageCalculatorTest {
 
     @Test
     void sumsMaximumJoltageUsingSelectedBatteryCount() {
-        JoltageCalculator calculator = new JoltageCalculator();
-
-        long result = calculator.totalMaximumJoltageUsingBatteries(List.of(
+        long result = new TwoBatteryJoltageSolver().solve(List.of(
                 new BatteryBank(List.of(9, 8, 7)),
                 new BatteryBank(List.of(1, 2, 3))
-        ), 2);
+        ));
 
         assertEquals(98 + 23, result);
     }
