@@ -1,505 +1,726 @@
-# Advent of Code
+# Advent of Code 2025
 
-Este proyecto es mi práctica de Java basada en Advent of Code. El objetivo no es solo sacar el número correcto de cada puzzle, sino construir una solución legible, con nombres claros, clases con responsabilidades separadas, patrones usados con sentido y tests que demuestren que la solución funciona.
+Este proyecto es mi práctica de Java basada en Advent of Code 2025. La idea no es solo obtener el resultado correcto, sino tener una solución que pueda explicar en clase: código dividido por responsabilidades, nombres claros, tests, patrones usados con sentido y algoritmos que se puedan razonar.
 
-La idea que sigo en cada día es separar el problema en partes pequeñas. Primero modelo el dominio del puzzle, después separo el parseo de la entrada y finalmente dejo la lógica de solución en clases específicas. Así evito tener todo mezclado en una sola clase grande.
+El proyecto se mantiene como un único proyecto Maven. Cada día tiene una clase principal que coordina el flujo, un paquete de entrada para parsear el texto, clases de modelo para representar el dominio y, cuando encaja, un paquete `solver` con estrategias separadas para cada parte.
+
+## Estructura general
+
+```text
+src/main/java/aoc
+├── day01
+├── day02
+├── ...
+└── day12
+```
+
+Cada día sigue una idea parecida:
+
+- `input`: convierte el texto del puzzle en objetos del dominio.
+- `model` o paquete de dominio (`dial`, `battery`, `paper`, `factory`, etc.): representa los conceptos del problema.
+- `solver`: contiene las estrategias o casos de uso de solución cuando hay más de una forma clara de resolver el día.
+- clase principal del día: coordina parser y solver.
+
+Esta separación ayuda a aplicar SRP, reducir acoplamiento y probar cada parte sin depender siempre del archivo de entrada real.
 
 ## Día 1: Entrada secreta
 
 ### Qué pide el problema
 
-El Día 1 trata de una caja fuerte con un dial circular numerado del 0 al 99. El dial empieza en 50 y la entrada es una lista de instrucciones como `L68` o `R48`: la letra indica la dirección y el número indica cuántos clics se mueve.
+El puzzle trabaja con un dial circular numerado del 0 al 99. El dial empieza en 50 y la entrada tiene instrucciones como `L68` o `R48`.
 
-En la parte 1 se cuenta cuántas rotaciones terminan exactamente en la posición 0. En la parte 2 se cuenta cada clic que cae en 0, incluso si ocurre a mitad de una rotación larga. Por eso `R1000`, empezando en 50, cuenta diez llegadas a 0.
+En la parte 1 se cuenta cuántas rotaciones terminan exactamente en 0. En la parte 2 se cuenta cada clic que cae en 0, aunque ocurra a mitad de una rotación larga.
 
-### Estructura del Día 1
+### Idea principal
 
-El código está en `aoc.day01` y mantiene tres responsabilidades claras:
+La lógica importante está en modelar bien el dial circular. `SafeDial` encapsula la posición y aplica rotaciones usando módulo. Para la parte 2, también calcula cuántas veces una rotación pasa por una posición concreta.
+
+### Estructura y clases
 
 ```text
 aoc.day01
-├── SecretEntrancePuzzle.java
+├── SecretEntrancePuzzle
 ├── dial
 ├── input
 └── password
 ```
 
-En `dial` está el modelo del problema. `SafeDial` encapsula la posición del dial y sabe aplicar rotaciones. `RotationDirection` modela izquierda y derecha. `DialRotation` es el objeto de valor de una instrucción ya interpretada y ofrece `fromInstruction(...)` como factory method para construir una rotación desde texto. `RotationProgram` agrupa las rotaciones y es `Iterable<DialRotation>`, de modo que los solvers pueden recorrer el programa sin depender de la lista interna.
+Clases importantes:
 
-En `input`, `RotationParser` convierte líneas de entrada en un `RotationProgram`. El parser no calcula contraseñas: solo traduce texto a objetos del dominio.
+- `SafeDial`: representa el dial y oculta cómo se actualiza la posición.
+- `DialRotation`: representa una instrucción ya parseada.
+- `RotationDirection`: enum con comportamiento para izquierda y derecha.
+- `RotationProgram`: colección iterable de rotaciones.
+- `RotationParser`: convierte líneas de texto en un `RotationProgram`.
+- `PasswordSolver`: interfaz común.
+- `FinalPositionPasswordSolver`: estrategia de parte 1.
+- `ClickPasswordSolver`: estrategia de parte 2.
 
-En `password`, `PasswordSolver` es la interfaz común de estrategia. `FinalPositionPasswordSolver` resuelve la parte 1 contando finales en 0. `ClickPasswordSolver` resuelve la parte 2 contando clics que caen en 0. `SecretEntrancePuzzle` coordina el caso de uso: parsea la entrada y delega en el solver correspondiente.
+### Patrones y principios
 
-### Patrones usados en Día 1
+Uso Strategy con `PasswordSolver`, porque las dos partes usan la misma entrada pero cuentan cosas distintas.
 
-Uso Strategy porque las dos partes comparten entrada y modelo, pero tienen criterios de conteo distintos. La interfaz `PasswordSolver` permite expresar esa diferencia sin meter dos algoritmos en una misma clase.
+Uso Factory Method / static factory con `DialRotation.fromInstruction(...)` y `RotationDirection.fromSymbol(...)`, porque centralizan la conversión desde texto a objetos del dominio.
 
-Uso Factory Method de forma sencilla en `DialRotation.fromInstruction(...)` y `RotationDirection.fromSymbol(...)`, porque la creación desde texto pertenece al dominio de la rotación y de la dirección, no al solver.
+Uso Iterator porque `RotationProgram` implementa `Iterable<DialRotation>` y permite recorrer las rotaciones sin exponer una lista mutable.
 
-Uso Iterator con `RotationProgram`, que permite recorrer las rotaciones sin exponer una colección mutable ni acoplar los solvers a la representación interna.
+También hay polimorfismo en `RotationDirection`: cada dirección sabe aplicar su movimiento.
 
-### Principios aplicados
+Principios:
 
-SRP aparece en la separación entre dial, parser y solvers. DRY se mantiene porque la lógica circular del dial vive en `SafeDial` y se reutiliza en ambas partes. KISS y YAGNI se respetan porque solo hay tres piezas nuevas que aportan claridad: dos estrategias y un programa iterable. La posición del dial está encapsulada y los solvers dependen de objetos de dominio, no de líneas de texto.
+- SRP: parser, dial y solvers están separados.
+- DRY: la lógica circular vive en `SafeDial` y se reutiliza.
+- Encapsulación: la posición del dial no se modifica desde fuera.
+- Bajo acoplamiento: los solvers trabajan con `RotationProgram`, no con strings.
 
-### Tests del Día 1
+### Tests
 
-Los tests cubren el ejemplo oficial de la parte 1 con resultado 3, el ejemplo oficial de la parte 2 con resultado 6, el caso `R1000`, el comportamiento circular del dial, el parseo de instrucciones y los errores de entrada. También se comprueba que la posición inicial no se cuenta por sí sola.
+Los tests cubren el ejemplo oficial, `R1000`, giros circulares, parseo de instrucciones, errores de entrada y que la posición inicial no se cuente sola.
+
+### Cómo defendería este día
+
+Explicaría que primero separé los conceptos del problema: dial, rotación y contraseña. Después separé las dos formas de calcular la contraseña en estrategias distintas, porque parte 1 y parte 2 no cuentan lo mismo.
 
 ## Día 2: Gift Shop
 
 ### Qué pide el problema
 
-El Día 2 trabaja con rangos de IDs de producto, separados por comas. Hay que sumar los IDs inválidos dentro de esos rangos.
+La entrada tiene rangos de IDs de producto. Hay que sumar los IDs inválidos.
 
-En la parte 1 un ID es inválido si está formado por dos mitades iguales, por ejemplo `55`, `6464` o `123123`. En la parte 2 la regla se amplía: el ID es inválido si está formado por una secuencia repetida dos o más veces, por ejemplo `123123123` o `1212121212`.
+En la parte 1 un ID es inválido si está formado por dos mitades iguales, como `55` o `123123`. En la parte 2 un ID es inválido si está formado por una secuencia repetida dos o más veces, como `123123123`.
 
-### Estructura del Día 2
+### Idea principal
 
-El código está en `aoc.day02`:
+No se recorren todos los números de rangos enormes. Se generan candidatos con patrón repetido y luego se comprueba si caen dentro del rango. En parte 2 se usa un `Set<Long>` para evitar sumar dos veces el mismo ID si se puede generar de varias formas.
+
+### Estructura y clases
 
 ```text
 aoc.day02
-├── GiftShopPuzzle.java
+├── GiftShopPuzzle
 ├── input
 ├── product
 └── solver
 ```
 
-En `input`, `ProductRangeParser` convierte la línea de entrada en objetos `ProductIdRange`.
+Clases importantes:
 
-En `product`, `ProductIdRange` representa un rango cerrado y valida que sus límites sean positivos y estén ordenados. `RepeatedPatternProductId` concentra operaciones de dominio para construir y comprobar IDs repetidos.
+- `ProductRangeParser`: parsea rangos.
+- `ProductIdRange`: rango cerrado de IDs.
+- `RepeatedPatternProductId`: utilidades del dominio para construir y reconocer patrones repetidos.
+- `InvalidProductIdRule`: interfaz de regla.
+- `DoublePatternInvalidProductIdRule`: regla de parte 1.
+- `RepeatedPatternInvalidProductIdRule`: regla de parte 2.
+- `ProductIdSumCalculator`: suma los IDs producidos por una regla.
 
-En `solver`, `InvalidProductIdRule` es la estrategia de regla inválida. `DoublePatternInvalidProductIdRule` implementa la regla de la parte 1. `RepeatedPatternInvalidProductIdRule` implementa la regla de la parte 2 y mantiene un `Set<Long>` para evitar sumar dos veces el mismo ID cuando puede generarse con más de una longitud de secuencia. `ProductIdSumCalculator` recibe una regla y suma los IDs inválidos producidos por ella.
+### Patrones y principios
 
-`GiftShopPuzzle` coordina el flujo: parsea rangos y usa un calculador para cada parte.
+Uso Strategy con `InvalidProductIdRule`, porque cambia la regla para decidir si un ID es inválido.
 
-### Patrones usados en Día 2
+Principios:
 
-Uso Strategy porque las reglas de invalidez cambian entre partes, pero el cálculo de suma es el mismo. `ProductIdSumCalculator` no necesita saber si se está aplicando la regla doble o la regla de secuencia repetida.
+- SRP: parseo, rango, generación de IDs y suma están separados.
+- DRY: el cálculo de suma se comparte en `ProductIdSumCalculator`.
+- KISS: se generan candidatos válidos en vez de recorrer rangos completos.
+- Encapsulación: `ProductIdRange` concentra la comprobación `contains`.
 
-### Principios aplicados
+### Tests
 
-SRP queda claro: parsear rangos, representar rangos, generar IDs inválidos y sumar resultados son responsabilidades separadas. DRY aparece en `ProductIdSumCalculator`, que reutiliza el mismo flujo de suma para ambas reglas. KISS se mantiene porque las reglas siguen siendo clases pequeñas. No se hace fuerza bruta sobre rangos enormes; se generan candidatos repetidos y se comprueba si caen dentro del rango. El `Set` de la parte 2 se conserva porque evita duplicados reales.
+Los tests cubren ejemplos oficiales, rangos pequeños, rangos sin inválidos, patrones repetidos y duplicados como `111111`.
 
-### Tests del Día 2
+### Cómo defendería este día
 
-Los tests cubren el ejemplo oficial de parte 1 con resultado `1227775554` y el de parte 2 con resultado `4174379265`. También prueban rangos pequeños, ausencia de IDs inválidos, detección de patrones repetidos y prevención de duplicados como `111111`.
+Diría que Strategy encaja porque la pregunta de parte 1 y parte 2 es la misma, pero la regla de invalidez cambia. También destacaría que la solución evita fuerza bruta sobre rangos grandes.
 
 ## Día 3: Vestíbulo
 
 ### Qué pide el problema
 
-El Día 3 trabaja con bancos de baterías. Cada línea contiene dígitos del 1 al 9 y hay que formar el mayor número posible eligiendo baterías sin cambiar su orden original.
+Cada línea representa un banco de baterías con dígitos del 1 al 9. Hay que formar el mayor número posible manteniendo el orden original.
 
-En la parte 1 se eligen dos baterías. En la parte 2 se eligen doce baterías, por lo que el resultado puede superar `int` y se usa `long`.
+En la parte 1 se eligen 2 baterías. En la parte 2 se eligen 12 baterías, por eso el resultado usa `long`.
 
-La regla importante es que no se ordenan los dígitos. La solución mantiene la lógica voraz: para cada posición del resultado se busca el mayor dígito posible dejando suficientes baterías para completar las posiciones restantes.
+### Idea principal
 
-### Estructura del Día 3
+El algoritmo es voraz: para cada posición del resultado se elige el mayor dígito posible, pero dejando suficientes dígitos para completar el resto. No se ordenan los dígitos; se mantiene el orden original.
 
-El código está en `aoc.day03`:
+### Estructura y clases
 
 ```text
 aoc.day03
-├── LobbyPuzzle.java
+├── LobbyPuzzle
 ├── battery
 ├── input
 └── solver
 ```
 
-En `battery`, `BatteryBank` encapsula los dígitos disponibles y contiene el método `maximumJoltageUsingBatteries(...)`, que implementa la selección voraz preservando el orden.
+Clases importantes:
 
-En `input`, `BatteryBankParser` transforma cada línea en un `BatteryBank` y valida que los caracteres sean dígitos válidos del 1 al 9.
+- `BatteryBank`: encapsula los dígitos y el algoritmo voraz.
+- `BatteryBankParser`: parsea líneas.
+- `JoltageSolver`: interfaz común.
+- `TwoBatteryJoltageSolver`: parte 1.
+- `TwelveBatteryJoltageSolver`: parte 2.
 
-En `solver`, `JoltageSolver` es la interfaz común. `TwoBatteryJoltageSolver` resuelve la parte 1 y `TwelveBatteryJoltageSolver` resuelve la parte 2. Ambos reutilizan la misma lógica del modelo y solo fijan cuántas baterías se eligen.
+### Patrones y principios
 
-`LobbyPuzzle` coordina parser y solvers.
+Uso Strategy con `JoltageSolver`, porque cambia la cantidad de baterías elegidas.
 
-### Patrones usados en Día 3
+Principios:
 
-Uso Strategy de forma moderada para separar el solver de dos baterías y el solver de doce baterías. La interfaz común `JoltageSolver` mantiene el punto de entrada igual para las dos partes.
+- SRP: parseo, modelo y solvers están separados.
+- DRY: el algoritmo general está en `BatteryBank.maximumJoltageUsingBatteries(...)`.
+- KISS: un algoritmo voraz directo resuelve ambas partes.
+- Encapsulación: la lista interna de dígitos se copia.
 
-### Principios aplicados
+### Tests
 
-SRP separa parseo, modelo y cálculo por parte. DRY queda en `BatteryBank.maximumJoltageUsingBatteries(...)`, que evita duplicar el algoritmo para 2 y 12 baterías. KISS se mantiene con una estrategia por parte y un único algoritmo voraz. YAGNI mantiene el diseño centrado en lo que pide el problema. La encapsulación protege la lista interna de baterías mediante copia defensiva.
+Los tests cubren ejemplos oficiales, orden original, caso de 12 baterías y entradas inválidas.
 
-### Tests del Día 3
+### Cómo defendería este día
 
-Los tests cubren los ejemplos oficiales: parte 1 con resultado `357` y parte 2 con resultado `3121910778619`. También verifican que el algoritmo respeta el orden original, que no ordena los dígitos, que funciona con doce baterías y que rechaza bancos o cantidades inválidas.
+Lo defendería explicando que el punto clave no es ordenar los dígitos, sino elegir una subsecuencia máxima. La abstracción del solver solo fija si se eligen 2 o 12 baterías.
 
-## D?a 4: Printing Department
+## Día 4: Printing Department
 
-### Qu? pide el problema
+### Qué pide el problema
 
-El D?a 4 trata de un mapa donde aparecen rollos de papel marcados con `@` y espacios vac?os marcados con `.`.
+El mapa contiene rollos de papel `@` y huecos `.`.
 
-En la parte 1 hay que contar los rollos accesibles para los montacargas. Un rollo es accesible cuando tiene menos de cuatro rollos en las ocho posiciones adyacentes.
+En la parte 1 se cuentan los rollos accesibles: un rollo es accesible si tiene menos de cuatro rollos alrededor. En la parte 2 se retiran por rondas todos los rollos accesibles hasta que no quedan más.
 
-En la parte 2 los rollos accesibles se retiran por rondas. Despu?s de cada retirada, el mapa cambia y se vuelven a buscar rollos accesibles hasta que no queda ninguno que pueda retirarse.
+### Idea principal
 
-### Estructura del D?a 4
+La cuadrícula sabe contar vecinos. La parte 2 reutiliza la misma regla de accesibilidad, pero la aplica de forma repetida creando una nueva cuadrícula sin los rollos retirados.
 
-El c?digo est? en `aoc.day04`:
+### Estructura y clases
 
 ```text
 aoc.day04
-??? PrintingDepartmentPuzzle.java
-??? input
-??? paper
-??? solver
+├── PrintingDepartmentPuzzle
+├── input
+├── paper
+└── solver
 ```
 
-En `paper`, `GridPosition` representa una coordenada y `PaperRollGrid` encapsula la cuadr?cula. La cuadr?cula sabe si hay un rollo en una posici?n, cuenta vecinos y puede crear una nueva cuadr?cula sin los rollos retirados.
+Clases importantes:
 
-En `input`, `PaperRollMapParser` convierte las l?neas del archivo en un `PaperRollGrid` y valida los caracteres permitidos.
+- `PaperRollMapParser`: parsea la cuadrícula.
+- `PaperRollGrid`: representa el mapa y cuenta vecinos.
+- `GridPosition`: coordenada de fila y columna.
+- `PaperRollSolver`: interfaz común.
+- `AccessibleRollSolver`: parte 1.
+- `RemovableRollSolver`: parte 2.
+- `ForkliftAccessSolver`: fachada que conserva el uso desde tests.
 
-En `solver`, `PaperRollSolver` es la interfaz com?n para las estrategias. `AccessibleRollSolver` resuelve la parte 1 contando rollos accesibles. `RemovableRollSolver` resuelve la parte 2 aplicando rondas de retirada. `ForkliftAccessSolver` queda como fachada para usar ambas estrategias desde el puzzle y desde los tests.
+### Patrones y principios
 
-`PrintingDepartmentPuzzle` coordina parser y solver.
+Uso Strategy con `PaperRollSolver`, porque parte 1 y parte 2 usan la misma regla base pero distinto flujo.
 
-### Patrones usados en D?a 4
+Principios:
 
-Uso Strategy para separar la regla de la parte 1 y la regla de la parte 2. Las dos trabajan con el mismo modelo (`PaperRollGrid`), pero una solo cuenta accesibles y la otra repite retiradas.
+- SRP: parser, cuadrícula y estrategias están separados.
+- DRY: la regla de accesibilidad se reutiliza.
+- Encapsulación: `PaperRollGrid` oculta las filas internas.
+- Composición: `ForkliftAccessSolver` usa estrategias en vez de heredar.
 
-### Principios aplicados
+### Tests
 
-SRP queda repartido entre parser, modelo de cuadr?cula y estrategias de soluci?n. DRY se mantiene porque la regla de accesibilidad se reutiliza al contar accesibles y al retirar por rondas. KISS se mantiene con una fachada peque?a y dos estrategias directas. La cuadr?cula encapsula su representaci?n interna y devuelve una nueva cuadr?cula cuando se retiran rollos.
+Los tests cubren ejemplos oficiales, conteo de vecinos, mapas inválidos y retiradas acumuladas.
 
-### Tests del D?a 4
+### Cómo defendería este día
 
-Los tests cubren el ejemplo oficial de parte 1 con resultado `13` y parte 2 con resultado `43`. Tambi?n prueban el conteo de vecinos, mapas inv?lidos, rollos con cuatro vecinos y retiradas acumuladas en varias rondas.
+Explicaría que parte 2 no es otra regla nueva, sino la misma regla aplicada por rondas. Por eso separé contar accesibles de retirar repetidamente.
 
-## D?a 5: Cafeteria
+## Día 5: Cafeteria
 
-### Qu? pide el problema
+### Qué pide el problema
 
-El D?a 5 trabaja con rangos de ingredientes frescos y con una lista de ingredientes disponibles.
+La entrada tiene rangos de ingredientes frescos y una lista de ingredientes disponibles.
 
-En la parte 1 se cuenta cu?ntos ingredientes disponibles est?n dentro de alg?n rango fresco. Si un ingrediente cae en varios rangos solapados, sigue contando una sola vez porque aparece una sola vez en la lista de disponibles.
+En la parte 1 se cuentan los ingredientes disponibles que caen en algún rango fresco. En la parte 2 se cuentan todos los IDs cubiertos por los rangos, fusionando solapamientos y rangos adyacentes.
 
-En la parte 2 ya no se usa la lista de disponibles. Hay que contar cu?ntos IDs distintos est?n cubiertos por todos los rangos frescos, fusionando rangos solapados o adyacentes.
+### Idea principal
 
-### Estructura del D?a 5
+La parte 2 se resuelve ordenando rangos y fusionándolos. Así no se enumeran todos los IDs si los rangos son grandes.
 
-El c?digo est? en `aoc.day05`:
+### Estructura y clases
 
 ```text
 aoc.day05
-??? CafeteriaPuzzle.java
-??? input
-??? inventory
-??? solver
+├── CafeteriaPuzzle
+├── input
+├── inventory
+└── solver
 ```
 
-En `inventory`, `IngredientIdRange` representa un rango inclusivo, `InventoryDatabase` agrupa los rangos frescos y los IDs disponibles, y `FreshIngredientCounter` act?a como fachada para las dos estrategias.
+Clases importantes:
 
-En `input`, `InventoryDatabaseParser` lee las dos secciones del archivo: primero los rangos, luego la l?nea en blanco y despu?s los IDs disponibles.
+- `InventoryDatabaseParser`: parsea rangos y disponibles.
+- `InventoryDatabase`: agrupa datos parseados.
+- `IngredientIdRange`: rango inclusivo.
+- `FreshIngredientSolver`: interfaz común.
+- `AvailableFreshIngredientSolver`: parte 1.
+- `AllFreshIngredientSolver`: parte 2.
+- `FreshIngredientCounter`: fachada compatible con tests.
 
-En `solver`, `FreshIngredientSolver` es la interfaz com?n. `AvailableFreshIngredientSolver` resuelve la parte 1 revisando los IDs disponibles. `AllFreshIngredientSolver` resuelve la parte 2 ordenando y fusionando rangos para contar cada ID fresco una sola vez.
+### Patrones y principios
 
-`CafeteriaPuzzle` coordina parser y contador.
+Uso Strategy con `FreshIngredientSolver`, porque cada parte responde una pregunta distinta sobre el mismo inventario.
 
-### Patrones usados en D?a 5
+Principios:
 
-Uso Strategy porque las dos partes responden preguntas distintas sobre los mismos datos. La parte 1 trabaja sobre IDs disponibles y la parte 2 trabaja sobre rangos completos, pero ambas se exponen como `FreshIngredientSolver`.
+- SRP: parseo, modelo y cálculo están separados.
+- DRY: `IngredientIdRange.contains(...)` concentra pertenencia a rango.
+- KISS: fusión de rangos en vez de enumerar IDs.
+- Encapsulación: `InventoryDatabase` copia sus listas.
 
-### Principios aplicados
+### Tests
 
-SRP separa parseo, modelo de inventario y c?lculo. DRY aparece en `IngredientIdRange.contains(...)`, que concentra la comprobaci?n de pertenencia a un rango. KISS se mantiene porque la parte 2 no enumera todos los IDs: ordena rangos, los fusiona y suma tama?os. La encapsulaci?n est? en `InventoryDatabase`, que copia las listas recibidas.
+Los tests cubren ejemplos oficiales, rangos solapados, rangos separados y rangos adyacentes.
 
-### Tests del D?a 5
+### Cómo defendería este día
 
-Los tests cubren el ejemplo oficial de parte 1 con resultado `3` y parte 2 con resultado `14`. Tambi?n prueban ingredientes dentro de rangos, rangos solapados, rangos separados y rangos adyacentes.
+Explicaría que parte 1 mira una lista concreta de ingredientes, mientras que parte 2 trabaja con el conjunto total cubierto por los rangos. Esa diferencia justifica dos estrategias.
 
-## D?a 6: Trash Compactor
+## Día 6: Trash Compactor
 
-### Qu? pide el problema
+### Qué pide el problema
 
-El D?a 6 trabaja con una hoja de operaciones escrita en columnas. Cada bloque de columnas representa un problema matem?tico con varios n?meros y una operaci?n.
+La entrada es una hoja de operaciones escrita en columnas.
 
-En la parte 1 los problemas se leen de arriba hacia abajo. En la parte 2 se leen por columnas de derecha a izquierda, formando n?meros de otra manera. Despu?s de parsear, el c?lculo sigue siendo sumar el resultado de todos los problemas.
+En la parte 1 los problemas se leen de arriba hacia abajo. En la parte 2 se leen por columnas de derecha a izquierda. Después de parsear, se suman los resultados de todos los problemas.
 
-### Estructura del D?a 6
+### Idea principal
 
-El c?digo est? en `aoc.day06`:
+La diferencia entre partes está en cómo se interpreta la hoja, no en cómo se resuelve una operación. Por eso se reutilizan `MathProblem`, `MathOperation` y `WorksheetSolver`.
+
+### Estructura y clases
 
 ```text
 aoc.day06
-??? TrashCompactorPuzzle.java
-??? input
-??? worksheet
-??? solver
+├── TrashCompactorPuzzle
+├── input
+├── worksheet
+└── solver
 ```
 
-En `worksheet`, `MathProblem` representa un problema y `MathOperation` representa la operaci?n. `WorksheetSolver` suma los resultados de una lista de problemas.
+Clases importantes:
 
-En `input`, `WorksheetParser` se encarga de dividir la hoja en bloques de columnas y convertir cada bloque en objetos `MathProblem`. Tiene un m?todo para la lectura de parte 1 y otro para la lectura de parte 2.
+- `WorksheetParser`: parsea la hoja en los dos modos.
+- `MathProblem`: números y operación.
+- `MathOperation`: enum para suma y multiplicación.
+- `WorksheetSolver`: suma resultados.
+- `TrashCompactorSolver`: interfaz común.
+- `TopToBottomWorksheetSolver`: parte 1.
+- `RightToLeftWorksheetSolver`: parte 2.
 
-En `solver`, `TrashCompactorSolver` es la interfaz com?n. `TopToBottomWorksheetSolver` resuelve la parte 1 usando la lectura vertical. `RightToLeftWorksheetSolver` resuelve la parte 2 usando la lectura de derecha a izquierda.
+### Patrones y principios
 
-`TrashCompactorPuzzle` coordina las dos estrategias.
+Uso Strategy con `TrashCompactorSolver`, porque cada parte usa un modo distinto de lectura.
 
-### Patrones usados en D?a 6
+Uso Factory Method con `MathOperation.fromSymbol(...)`, que convierte `+` o `*` en una operación.
 
-Uso Strategy para separar los dos modos de resolver el d?a: lectura vertical y lectura de derecha a izquierda.
+Uso polimorfismo en `MathOperation`, porque cada operación implementa su propio `apply`.
 
-Uso Factory Method en `MathOperation.fromSymbol(...)`, que centraliza c?mo se convierte `+` o `*` en una operaci?n del dominio.
+Principios:
 
-### Principios aplicados
+- SRP: parser, problema, operación y solver están separados.
+- DRY: el cálculo de problemas se reutiliza.
+- KISS: las estrategias solo eligen el modo de parseo.
+- Encapsulación: `MathProblem` copia los números.
 
-SRP separa interpretaci?n de la hoja, representaci?n de problemas, operaciones matem?ticas y solvers por parte. DRY se mantiene porque `MathProblem`, `MathOperation` y `WorksheetSolver` se reutilizan en las dos partes. KISS se mantiene con dos estrategias peque?as que solo cambian el m?todo de parseo. La encapsulaci?n aparece en `MathProblem`, que copia la lista de n?meros.
+### Tests
 
-### Tests del D?a 6
+Los tests cubren ejemplos oficiales, parseo, lectura derecha-izquierda, operaciones y suma total.
 
-Los tests cubren el ejemplo oficial de parte 1 con resultado `4277556` y parte 2 con resultado `3263827`. Tambi?n prueban parseo de l?neas, lectura de derecha a izquierda, rechazo de caracteres inv?lidos, operaciones matem?ticas y suma total de problemas.
+### Cómo defendería este día
 
-## D?a 7: Laboratories
+Diría que separé la lectura visual de la hoja del cálculo matemático. Así la parte 2 cambia el parseo, pero no duplica la lógica de resolver operaciones.
 
-### Qu? pide el problema
+## Día 7: Laboratories
 
-El D?a 7 trabaja con un manifold de taquiones representado como una cuadr?cula. El punto `S` marca el inicio y los caracteres `^` representan splitters.
+### Qué pide el problema
 
-En la parte 1 se cuenta cu?ntos splitters activa el haz. Cuando el haz encuentra un splitter, se divide hacia izquierda y derecha en la siguiente fila.
+El mapa representa un manifold de taquiones. `S` marca el inicio y `^` son splitters.
 
-En la parte 2 se cuentan todas las l?neas temporales posibles. En esta parte no basta con saber qu? columnas est?n activas: tambi?n importa cu?ntas l?neas llegan a cada columna, por eso se usa `BigInteger`.
+En la parte 1 se cuentan los splitters activados. En la parte 2 se cuentan todas las líneas temporales posibles, usando `BigInteger` porque el número puede crecer mucho.
 
-### Estructura del D?a 7
+### Idea principal
 
-El c?digo est? en `aoc.day07`:
+Parte 1 puede juntar haces por columna con un `Set`, porque si llegan a la misma columna se comportan igual. Parte 2 necesita un `Map<Integer, BigInteger>` porque importa cuántas líneas llegan a cada columna.
+
+### Estructura y clases
 
 ```text
 aoc.day07
-??? LaboratoriesPuzzle.java
-??? input
-??? manifold
-??? solver
+├── LaboratoriesPuzzle
+├── input
+├── manifold
+└── solver
 ```
 
-En `manifold`, `TachyonManifold` representa la cuadr?cula y la posici?n inicial. `TachyonSplitterCounter` contiene el conteo de splitters de la parte 1 y `QuantumTimelineCounter` contiene el conteo de l?neas temporales de la parte 2.
+Clases importantes:
 
-En `input`, `TachyonManifoldParser` convierte el texto en un `TachyonManifold` y valida el mapa.
+- `TachyonManifoldParser`: parsea el mapa.
+- `TachyonManifold`: representa cuadrícula e inicio.
+- `TachyonSplitterCounter`: conteo de parte 1.
+- `QuantumTimelineCounter`: conteo de parte 2.
+- `TachyonSolver<T>`: interfaz común.
+- `SplitCountingSolver`: parte 1.
+- `QuantumTimelineSolver`: parte 2.
 
-En `solver`, `TachyonSolver<T>` es la interfaz com?n. `SplitCountingSolver` resuelve la parte 1 y devuelve `Integer`. `QuantumTimelineSolver` resuelve la parte 2 y devuelve `BigInteger`.
+### Patrones y principios
 
-`LaboratoriesPuzzle` coordina parser y estrategias.
+Uso Strategy con `TachyonSolver<T>`, porque las partes calculan resultados distintos sobre el mismo manifold.
 
-### Patrones usados en D?a 7
+Principios:
 
-Uso Strategy para separar el solver de parte 1 y el solver de parte 2. Las dos estrategias trabajan con el mismo `TachyonManifold`, pero devuelven tipos distintos porque la parte 2 puede crecer mucho m?s.
+- SRP: parser, manifold, contadores y solvers están separados.
+- DRY: las consultas de cuadrícula están en `TachyonManifold`.
+- KISS: cada contador mantiene su estructura de datos concreta.
+- Encapsulación: el manifold copia sus celdas.
 
-### Principios aplicados
+### Tests
 
-SRP separa parser, modelo del manifold, contadores y estrategias. DRY se mantiene porque la validaci?n y las consultas sobre la cuadr?cula est?n en `TachyonManifold`. KISS se mantiene dejando el algoritmo de cada parte en su clase. La encapsulaci?n aparece en la copia interna de las celdas del manifold.
+Los tests cubren ejemplos oficiales, parseo, splitters, líneas temporales y mapas inválidos.
 
-### Tests del D?a 7
+### Cómo defendería este día
 
-Los tests cubren el ejemplo oficial, el parseo del manifold, el conteo de splitters, el conteo de l?neas temporales, mapas inv?lidos y casos donde varias l?neas temporales llegan a la misma columna.
+Explicaría que la parte 2 no puede ser solo un `Set`, porque perdería cuántas líneas temporales llegan a cada columna. Por eso cambia la estructura de datos.
 
-## D?a 8: Playground
+## Día 8: Playground
 
-### Qu? pide el problema
+### Qué pide el problema
 
-El D?a 8 trabaja con cajas de conexiones en un espacio tridimensional. Cada caja tiene coordenadas y se conectan primero las parejas m?s cercanas.
+Hay cajas de conexiones en 3D. Se conectan primero las parejas más cercanas.
 
-En la parte 1 se aplican las primeras 1000 conexiones por distancia y se multiplican los tama?os de los tres circuitos m?s grandes.
+En la parte 1 se aplican las primeras 1000 conexiones y se multiplican los tamaños de los tres circuitos más grandes. En la parte 2 se conectan cajas hasta formar un único circuito y se usa la última conexión necesaria.
 
-En la parte 2 se siguen conectando cajas hasta que todo forma un ?nico circuito. La respuesta es el producto de las coordenadas `X` de las dos cajas de la conexi?n que consigue unirlo todo.
+### Idea principal
 
-### Estructura del D?a 8
+Se generan todas las conexiones posibles, se ordenan por distancia al cuadrado y se conectan con Union-Find. Esto evita manejar listas de componentes de forma manual.
 
-El c?digo est? en `aoc.day08`:
+### Estructura y clases
 
 ```text
 aoc.day08
-??? PlaygroundPuzzle.java
-??? circuit
-??? input
-??? solver
+├── PlaygroundPuzzle
+├── circuit
+├── input
+└── solver
 ```
 
-En `circuit`, `JunctionBox` representa una caja, `JunctionConnection` representa una conexi?n candidata, `JunctionConnectionPlanner` ordena las conexiones por distancia y `CircuitNetwork` mantiene los grupos conectados con uni?n de conjuntos. `CircuitSizeCalculator` queda como fachada compatible para los tests existentes.
+Clases importantes:
 
-En `input`, `JunctionBoxParser` convierte las l?neas del archivo en cajas.
+- `JunctionBoxParser`: parsea cajas.
+- `JunctionBox`: coordenadas y distancia.
+- `JunctionConnection`: conexión candidata.
+- `JunctionConnectionPlanner`: genera y ordena conexiones.
+- `CircuitNetwork`: Union-Find con `parents` y `sizes`.
+- `CircuitSolver`: interfaz común.
+- `ThreeLargestCircuitSizeSolver`: parte 1.
+- `LastConnectionXCoordinateSolver`: parte 2.
+- `CircuitSizeCalculator`: fachada compatible con tests.
 
-En `solver`, `CircuitSolver` es la interfaz com?n. `ThreeLargestCircuitSizeSolver` resuelve la parte 1. `LastConnectionXCoordinateSolver` resuelve la parte 2.
+### Patrones y principios
 
-`PlaygroundPuzzle` coordina parser y estrategias.
+Uso Strategy con `CircuitSolver`, porque las dos partes recorren conexiones con objetivos distintos.
 
-### Patrones usados en D?a 8
+`CircuitNetwork` aplica la idea de Union-Find / Disjoint Set. Es una estructura de datos, no un patrón GoF, pero es importante porque mejora eficiencia y encapsula la lógica de unir componentes.
 
-Uso Strategy para separar los dos c?lculos: uno corta despu?s de un n?mero fijo de conexiones y otro busca la conexi?n que deja un ?nico circuito.
+Principios:
 
-### Principios aplicados
+- SRP: cajas, conexiones, red y solvers están separados.
+- DRY: `JunctionConnectionPlanner` centraliza la ordenación por distancia.
+- KISS: se usa distancia al cuadrado para evitar raíces.
+- Encapsulación: `CircuitNetwork` oculta arrays internos.
 
-SRP separa cajas, conexiones candidatas, red de circuitos, planificaci?n de conexiones y solvers. DRY aparece en `JunctionConnectionPlanner`, que ordena las conexiones una sola vez con la misma regla para ambas partes. KISS se mantiene usando distancia al cuadrado y uni?n de conjuntos. La encapsulaci?n est? en `CircuitNetwork`, que oculta los arrays internos de padres y tama?os.
+### Tests
 
-### Tests del D?a 8
+Los tests cubren ejemplos oficiales, parseo, distancia, unión de circuitos, tamaños y última conexión.
 
-Los tests cubren el ejemplo oficial, parseo de cajas, distancia entre cajas, conexi?n de circuitos, tama?os de circuitos y la conexi?n que deja un ?nico circuito.
+### Cómo defendería este día
 
-## D?a 9: Movie Theater
+Diría que Union-Find encaja porque el problema trata de ir uniendo grupos. No necesito guardar todas las conexiones activas, solo saber qué cajas pertenecen al mismo circuito.
 
-### Qu? pide el problema
+## Día 9: Movie Theater
 
-El D?a 9 trabaja con baldosas rojas en una sala de cine. Cada baldosa tiene coordenadas y se buscan rect?ngulos formados entre pares de baldosas.
+### Qué pide el problema
 
-En la parte 1 se busca el rect?ngulo de mayor ?rea entre cualquier pareja de baldosas rojas.
+La entrada contiene baldosas rojas con coordenadas.
 
-En la parte 2 el rect?ngulo tiene que quedar dentro de la zona roja o verde delimitada por el camino cerrado de baldosas. Para evitar recorrer una cuadr?cula enorme, la zona v?lida se calcula con compresi?n de coordenadas.
+En la parte 1 se busca el rectángulo de mayor área entre cualquier par de baldosas. En la parte 2 el rectángulo debe estar dentro de la zona roja o verde delimitada por el camino cerrado.
 
-### Estructura del D?a 9
+### Idea principal
 
-El c?digo est? en `aoc.day09`:
+La parte 1 compara pares de baldosas. La parte 2 construye la zona permitida con compresión de coordenadas y flood fill desde fuera para distinguir exterior e interior sin recorrer una cuadrícula enorme.
+
+### Estructura y clases
 
 ```text
 aoc.day09
-??? MovieTheaterPuzzle.java
-??? input
-??? theater
-??? solver
+├── MovieTheaterPuzzle
+├── input
+├── theater
+└── solver
 ```
 
-En `theater`, `RedTile` representa una baldosa y encapsula el c?lculo de ?rea inclusiva con otra baldosa. `RedGreenTileArea` representa la zona v?lida de la parte 2. `LargestRectangleFinder` queda como fachada compatible para los tests existentes.
+Clases importantes:
 
-En `input`, `RedTileParser` convierte el texto en baldosas.
+- `RedTileParser`: parsea coordenadas.
+- `RedTile`: baldosa y cálculo de área inclusiva.
+- `RedGreenTileArea`: zona válida de parte 2, con compresión y flood fill.
+- `TheaterAreaSolver`: interfaz común.
+- `UnrestrictedRectangleAreaSolver`: parte 1.
+- `RedGreenRectangleAreaSolver`: parte 2.
+- `LargestRectangleFinder`: fachada compatible con tests.
 
-En `solver`, `TheaterAreaSolver` es la interfaz com?n. `UnrestrictedRectangleAreaSolver` resuelve la parte 1. `RedGreenRectangleAreaSolver` resuelve la parte 2 comprobando que el rect?ngulo est? dentro de la zona v?lida.
+### Patrones y principios
 
-`MovieTheaterPuzzle` coordina parser y estrategias.
+Uso Strategy con `TheaterAreaSolver`, porque parte 1 no tiene restricciones y parte 2 valida contra una zona permitida.
 
-### Patrones usados en D?a 9
+Principios:
 
-Uso Strategy para separar el c?lculo sin restricciones de la parte 1 y el c?lculo restringido por zona v?lida de la parte 2.
+- SRP: parser, baldosa, zona válida y solvers están separados.
+- DRY: `RedTile.rectangleAreaWith(...)` concentra la fórmula del área.
+- Encapsulación: la compresión de coordenadas queda dentro de `RedGreenTileArea`.
+- Bajo acoplamiento: el solver pregunta si un rectángulo cabe, sin conocer el flood fill interno.
 
-### Principios aplicados
+### Tests
 
-SRP separa parser, modelo de baldosa, zona v?lida y solvers. DRY aparece en `RedTile.rectangleAreaWith(...)`, que concentra la f?rmula de ?rea inclusiva. KISS se mantiene con dos estrategias peque?as y un objeto espec?fico para la zona roja/verde. La encapsulaci?n evita que los solvers conozcan los detalles internos de la compresi?n de coordenadas.
+Los tests cubren ejemplos oficiales, parseo, área inclusiva, validación de entrada y área máxima dentro de la zona válida.
 
-### Tests del D?a 9
+### Cómo defendería este día
 
-Los tests cubren el ejemplo oficial, parseo de baldosas, c?lculo de ?rea inclusiva, b?squeda del ?rea m?xima, validaci?n de entrada y ?rea m?xima dentro de la zona roja/verde.
+Explicaría que la parte 2 sería demasiado grande si se recorrieran todas las coordenadas reales. Por eso la compresión de coordenadas reduce el problema a bloques relevantes.
 
-## D?a 10: Factory
+## Día 10: Factory
 
-### Qu? pide el problema
+### Qué pide el problema
 
-El D?a 10 trabaja con m?quinas de una f?brica. Cada l?nea describe una m?quina con luces, botones y requisitos de voltaje.
+Cada línea describe una máquina con luces, botones y requisitos de voltaje.
 
-En la parte 1 solo importan las luces. Cada bot?n alterna algunas luces y hay que encontrar el m?nimo n?mero de pulsaciones para llegar al patr?n objetivo.
+En la parte 1 los botones alternan luces y se busca el mínimo de pulsaciones para llegar al patrón objetivo. En la parte 2 los botones suman a contadores de voltaje y se busca el mínimo total de pulsaciones para cumplir requisitos.
 
-En la parte 2 importan los requisitos de voltaje. Cada bot?n suma a algunos contadores y hay que encontrar el m?nimo n?mero total de pulsaciones para cumplir todos los requisitos.
+### Idea principal
 
-### Estructura del D?a 10
+Parte 1 usa BFS sobre máscaras de bits, porque pulsar botones cambia estados de luces. Parte 2 se modela como un sistema lineal con restricciones enteras no negativas.
 
-El c?digo est? en `aoc.day10`:
+### Estructura y clases
 
 ```text
 aoc.day10
-??? FactoryPuzzle.java
-??? factory
-??? input
-??? solver
+├── FactoryPuzzle
+├── factory
+├── input
+└── solver
 ```
 
-En `factory`, `FactoryMachine` representa una m?quina, `ButtonWiring` representa qu? posiciones afecta un bot?n y `MachineInitializer` contiene los algoritmos principales: b?squeda para luces y resoluci?n del sistema de voltajes.
+Clases importantes:
 
-En `input`, `FactoryManualParser` convierte cada l?nea del manual en una `FactoryMachine`.
+- `FactoryManualParser`: parsea máquinas.
+- `FactoryMachine`: luces, botones y requisitos.
+- `ButtonWiring`: máscara de botón.
+- `MachineInitializer`: algoritmos principales.
+- `FactorySolver<T>`: interfaz común.
+- `LightInitializationSolver`: parte 1.
+- `JoltageInitializationSolver`: parte 2.
 
-En `solver`, `FactorySolver<T>` es la interfaz com?n. `LightInitializationSolver` resuelve la parte 1 y devuelve `Integer`. `JoltageInitializationSolver` resuelve la parte 2 y devuelve `Long`.
+### Patrones y principios
 
-`FactoryPuzzle` coordina parser y estrategias.
+Uso Strategy con `FactorySolver<T>`, porque parte 1 y parte 2 tienen objetivos y algoritmos distintos.
 
-### Patrones usados en D?a 10
+Principios:
 
-Uso Strategy para separar el c?lculo de luces y el c?lculo de voltaje. Las dos partes usan las mismas m?quinas, pero el objetivo y el algoritmo son distintos.
+- SRP: parser, modelo, inicializador y solvers están separados.
+- DRY: `FactoryMachine` y `ButtonWiring` se comparten.
+- KISS: cada solver delega en el algoritmo correspondiente.
+- Encapsulación: `FactoryMachine` copia listas internas.
 
-### Principios aplicados
+### Tests
 
-SRP separa parseo, modelo de m?quina, algoritmos de inicializaci?n y estrategias por parte. DRY se mantiene porque `FactoryMachine` y `ButtonWiring` se reutilizan en las dos partes. KISS aparece en la separaci?n de dos algoritmos claros: BFS para luces y sistema lineal para voltajes. La encapsulaci?n est? en las copias defensivas de listas dentro de `FactoryMachine`.
+Los tests cubren ejemplos oficiales, parseo, BFS de luces, resolución de voltaje y validaciones.
 
-### Tests del D?a 10
+### Cómo defendería este día
 
-Los tests cubren el ejemplo oficial de parte 1 con resultado `7` y parte 2 con resultado `33`. Tambi?n prueban parseo del manual, m?nimo de pulsaciones de luces, m?nimo de pulsaciones de voltaje y casos de validaci?n de m?quinas.
+Diría que hay dos problemas matemáticos distintos: estados binarios para luces y ecuaciones para voltaje. Por eso la separación en estrategias ayuda a explicarlo.
 
-## D?a 11: Reactor
+## Día 11: Reactor
 
-### Qu? pide el problema
+### Qué pide el problema
 
-El D?a 11 trabaja con una red de dispositivos. Cada dispositivo puede enviar datos a otros dispositivos, as? que el problema se modela como un grafo dirigido.
+La red de dispositivos es un grafo dirigido.
 
-En la parte 1 se cuentan los caminos desde `you` hasta `out`.
+En la parte 1 se cuentan caminos desde `you` hasta `out`. En la parte 2 se cuentan caminos desde `svr` hasta `out` que pasan por `dac` y `fft`.
 
-En la parte 2 se cuentan los caminos desde `svr` hasta `out` que pasan por `dac` y `fft`, en cualquier orden.
+### Idea principal
 
-### Estructura del D?a 11
+El conteo usa DFS con memoización. En parte 2 la clave de memoización incluye también si ya se han visitado los dispositivos requeridos.
 
-El c?digo est? en `aoc.day11`:
+### Estructura y clases
 
 ```text
 aoc.day11
-??? ReactorPuzzle.java
-??? input
-??? reactor
-??? solver
+├── ReactorPuzzle
+├── input
+├── reactor
+└── solver
 ```
 
-En `reactor`, `DeviceNetwork` representa el grafo y `PathCounter` contiene el conteo de caminos con memoizaci?n.
+Clases importantes:
 
-En `input`, `DeviceNetworkParser` convierte l?neas como `aaa: bbb ccc` en un `DeviceNetwork`.
+- `DeviceNetworkParser`: parsea el grafo.
+- `DeviceNetwork`: salidas de cada dispositivo.
+- `PathCounter`: DFS y memoización.
+- `ReactorSolver`: interfaz común.
+- `DirectPathSolver`: parte 1.
+- `RequiredDevicePathSolver`: parte 2.
 
-En `solver`, `ReactorSolver` es la interfaz com?n. `DirectPathSolver` resuelve la parte 1. `RequiredDevicePathSolver` resuelve la parte 2 con los dos dispositivos obligatorios.
+### Patrones y principios
 
-`ReactorPuzzle` coordina parser y estrategias.
+Uso Strategy con `ReactorSolver`, porque cambia la regla de conteo de caminos.
 
-### Patrones usados en D?a 11
+Principios:
 
-Uso Strategy para separar el conteo directo de caminos y el conteo con visitas obligatorias. Las dos estrategias usan el mismo grafo y el mismo `PathCounter`, pero aplican reglas distintas.
+- SRP: parser, grafo, contador y solver están separados.
+- DRY: `PathCounter` concentra la recursión y memoización.
+- Encapsulación: `DeviceNetwork` oculta el mapa interno.
+- Bajo acoplamiento: el solver trabaja con grafo, no con texto.
 
-### Principios aplicados
+### Tests
 
-SRP separa parser, grafo, contador de caminos y estrategias por parte. DRY aparece en `PathCounter`, que concentra el recorrido y la memoizaci?n. KISS se mantiene porque cada solver fija los nombres de dispositivos que pertenecen a su parte. La encapsulaci?n aparece en `DeviceNetwork`, que oculta el mapa interno de salidas.
+Los tests cubren ejemplos oficiales, parseo, caminos directos, caminos con visitas obligatorias, ciclos y dispositivos inexistentes.
 
-### Tests del D?a 11
+### Cómo defendería este día
 
-Los tests cubren el ejemplo oficial de parte 1 con resultado `5` y parte 2 con resultado `2`. Tambi?n prueban parseo de red, conteo de caminos, visitas obligatorias, dispositivo inicial inexistente y detecci?n de ciclos.
+Explicaría que el problema es de grafos. La memoización evita recalcular caminos desde el mismo nodo, y en parte 2 se amplía el estado con las visitas obligatorias.
 
-## D?a 12: Christmas Tree Farm
+## Día 12: Christmas Tree Farm
 
-### Qu? pide el problema
+### Qué pide el problema
 
-El D?a 12 trabaja con formas de regalos y regiones debajo de ?rboles. Cada forma est? dibujada con `#` y `.`, y cada regi?n indica cu?ntos regalos de cada forma hay que colocar.
+La entrada define formas de regalos y regiones debajo de árboles. Hay que contar en cuántas regiones caben los regalos indicados.
 
-La soluci?n cuenta cu?ntas regiones pueden contener todos sus regalos sin solapamientos entre celdas ocupadas `#`. Las formas se pueden rotar y voltear.
+La solución tiene en cuenta rotaciones y volteos, y evita solapamientos entre celdas ocupadas `#`.
 
-### Estructura del D?a 12
+### Idea principal
 
-El c?digo est? en `aoc.day12`:
+Cada orientación de una forma genera posibles colocaciones. Las colocaciones se representan con `BitSet`, así comprobar solapamientos es rápido. Para regiones grandes se usa una comprobación directa de área cuando encaja con la optimización del código.
+
+### Estructura y clases
 
 ```text
 aoc.day12
-??? ChristmasTreeFarmPuzzle.java
-??? farm
-??? input
-??? solver
+├── ChristmasTreeFarmPuzzle
+├── farm
+├── input
+└── solver
 ```
 
-En `farm`, `PresentShape` representa una forma, `ShapeOrientation` representa una orientaci?n normalizada, `TreeRegion` representa una regi?n, `FarmSummary` agrupa el input parseado y `PresentFitter` comprueba si los regalos caben.
+Clases importantes:
 
-En `input`, `FarmSummaryParser` lee las formas y las regiones.
+- `FarmSummaryParser`: parsea formas y regiones.
+- `PresentShape`: forma base y orientaciones.
+- `ShapeOrientation`: orientación normalizada.
+- `TreeRegion`: región y cantidades.
+- `FarmSummary`: resumen del input.
+- `PresentFitter`: algoritmo de encaje.
+- `ChristmasTreeFarmSolver`: interfaz de caso de uso.
+- `FittingRegionSolver`: cuenta regiones válidas.
 
-En `solver`, `ChristmasTreeFarmSolver` define el caso de uso sobre un `FarmSummary`. `FittingRegionSolver` resuelve la parte implementada contando las regiones donde caben los regalos.
+### Patrones y principios
 
-`ChristmasTreeFarmPuzzle` coordina parser y solver.
+No hay Strategy de dos partes, porque el código solo tiene una parte de cálculo. Sí hay una capa `solver` que separa el caso de uso del parser y del algoritmo de encaje.
 
-### Patrones usados en D?a 12
+Hay polimorfismo interno en las transformaciones de `PresentShape`, porque cada transformación sabe cómo convertir una celda.
 
-Uso una capa de solver para separar el caso de uso del parser y del algoritmo de encaje. Tambi?n hay polimorfismo interno en las transformaciones de `PresentShape`, porque cada transformaci?n sabe c?mo convertir una celda.
+Principios:
 
-### Principios aplicados
+- SRP: parser, formas, regiones y encaje están separados.
+- DRY: `PresentShape.orientations()` centraliza rotaciones y volteos.
+- KISS: `BitSet` simplifica el chequeo de solapamientos.
+- Encapsulación: las listas internas se copian.
 
-SRP separa parseo, formas, regiones y encaje. DRY aparece en `PresentShape.orientations()`, que centraliza rotaciones y volteos. KISS se mantiene usando `BitSet` para representar colocaciones ocupadas y comprobar solapamientos. La encapsulaci?n est? en las copias defensivas de `FarmSummary`, `TreeRegion`, `PresentShape` y `ShapeOrientation`.
+### Tests
 
-### Tests del D?a 12
+Los tests cubren el ejemplo oficial, parseo del resumen, orientaciones, encaje de regalos, rechazo por área y rechazo por dimensiones.
 
-Los tests cubren el ejemplo oficial con resultado `2`. Tambi?n prueban parseo del resumen, orientaciones de formas, encaje de regalos, rechazo por ?rea insuficiente y rechazo de formas que no pueden colocarse por dimensiones.
+### Cómo defendería este día
+
+Diría que aquí no forcé una parte 2 artificial. Lo importante es explicar el modelo de formas, orientaciones y colocaciones con `BitSet`.
+
+## Patrones usados en el proyecto
+
+### Strategy
+
+Aparece cuando una interfaz tiene implementaciones diferentes para resolver partes del puzzle:
+
+- `PasswordSolver`
+- `InvalidProductIdRule`
+- `JoltageSolver`
+- `PaperRollSolver`
+- `FreshIngredientSolver`
+- `TrashCompactorSolver`
+- `TachyonSolver`
+- `CircuitSolver`
+- `TheaterAreaSolver`
+- `FactorySolver`
+- `ReactorSolver`
+
+En estos casos, Strategy ayuda porque parte 1 y parte 2 comparten entrada o modelo, pero no siempre comparten el mismo algoritmo.
+
+### Factory Method / static factory
+
+Aparece cuando una clase centraliza la creación desde texto o símbolo:
+
+- `DialRotation.fromInstruction(...)`
+- `RotationDirection.fromSymbol(...)`
+- `MathOperation.fromSymbol(...)`
+
+Esto reduce condiciones repartidas por el código y deja la conversión cerca del dominio.
+
+### Iterator
+
+Aparece en `RotationProgram`, que implementa `Iterable<DialRotation>`. Así los solvers recorren un programa de rotaciones sin depender de cómo se guarda internamente.
+
+### Polimorfismo
+
+Aparece en enums como `RotationDirection` y `MathOperation`, y también en las transformaciones internas de `PresentShape`.
+
+## Principios de diseño aplicados
+
+- SRP: los parsers leen texto, los modelos representan el dominio y los solvers calculan respuestas.
+- DRY: la lógica común entre parte 1 y parte 2 se reutiliza en clases de dominio o servicios compartidos.
+- KISS: las soluciones mantienen algoritmos directos y defendibles.
+- YAGNI: no se añaden patrones que no aportan claridad.
+- Encapsulación: muchas clases copian listas o esconden estructuras internas.
+- Alta cohesión: cada paquete agrupa clases del mismo tema.
+- Bajo acoplamiento: los solvers trabajan con objetos del dominio, no con líneas de texto.
+- Composición sobre herencia: las clases coordinadoras reciben estrategias y servicios, en vez de crear jerarquías grandes.
+
+## Patrones que no forcé
+
+No usé Singleton porque no hay objetos globales necesarios. Los solvers y parsers se pueden crear normalmente.
+
+No usé Observer porque ningún día necesita notificar cambios a varios suscriptores.
+
+No usé Decorator porque no hay comportamiento que se añada dinámicamente a objetos existentes.
+
+No usé Adapter porque no estoy integrando APIs externas incompatibles.
+
+No usé Command porque las operaciones del puzzle no necesitan modelarse como comandos independientes con historial o deshacer.
+
+La idea general fue usar patrones cuando explican una diferencia real del problema, no añadirlos solo para que aparezcan en el proyecto.
+
+## Tests
+
+Los tests están en `src/test/java` y cubren:
+
+- ejemplos oficiales de cada día,
+- parsers de entrada,
+- modelos de dominio,
+- solvers principales,
+- casos de borde y errores de validación.
+
+También mantengo los `input.txt` locales fuera de la explicación como datos de ejecución. El README no depende de subir inputs personales para justificar el diseño.
