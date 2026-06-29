@@ -380,445 +380,126 @@ SRP separa parser, modelo de baldosa, zona v?lida y solvers. DRY aparece en `Red
 
 Los tests cubren el ejemplo oficial, parseo de baldosas, c?lculo de ?rea inclusiva, b?squeda del ?rea m?xima, validaci?n de entrada y ?rea m?xima dentro de la zona roja/verde.
 
-## Día 10: Factory
+## D?a 10: Factory
 
-### Qué pide el problema
+### Qu? pide el problema
 
-El Día 10 trata de máquinas de una fábrica. Cada línea del input describe una máquina con tres partes:
+El D?a 10 trabaja con m?quinas de una f?brica. Cada l?nea describe una m?quina con luces, botones y requisitos de voltaje.
 
-```text
-[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}
-```
+En la parte 1 solo importan las luces. Cada bot?n alterna algunas luces y hay que encontrar el m?nimo n?mero de pulsaciones para llegar al patr?n objetivo.
 
-La parte entre corchetes es el estado objetivo de las luces. `.` significa apagada y `#` significa encendida.
+En la parte 2 importan los requisitos de voltaje. Cada bot?n suma a algunos contadores y hay que encontrar el m?nimo n?mero total de pulsaciones para cumplir todos los requisitos.
 
-Las partes entre paréntesis son botones. Cada botón indica qué luces cambia cuando se pulsa. Por ejemplo, `(0,2)` cambia la primera y la tercera luz.
+### Estructura del D?a 10
 
-La parte entre llaves son requisitos de voltaje, pero en la parte 1 se ignoran porque el enunciado dice que todavía no importan.
-
-La pregunta es cuántas pulsaciones mínimas hacen falta en total para configurar todas las máquinas.
-
-Con el ejemplo oficial, las máquinas necesitan `2`, `3` y `2` pulsaciones, así que el resultado es:
-
-```text
-7
-```
-
-### Parte 2
-
-En la parte 2 ya no importan las luces. Ahora los botones aumentan contadores de voltaje.
-
-Los valores entre llaves sí se usan. Por ejemplo, `{3,5,4,7}` significa que la máquina tiene cuatro contadores y que hay que dejarlos exactamente en `3`, `5`, `4` y `7`.
-
-Un botón como `(1,3)` aumenta en `1` el segundo y el cuarto contador cada vez que se pulsa. La pregunta vuelve a ser el mínimo total de pulsaciones, pero ahora para cumplir los requisitos de voltaje.
-
-Con el ejemplo oficial, las tres máquinas necesitan `10`, `12` y `11` pulsaciones, así que el resultado de la parte 2 es:
-
-```text
-33
-```
-
-### Estructura del Día 10
-
-El código del Día 10 está en `aoc.day10` y lo he dividido así:
+El c?digo est? en `aoc.day10`:
 
 ```text
 aoc.day10
-├── FactoryPuzzle.java
-├── factory
-└── input
+??? FactoryPuzzle.java
+??? factory
+??? input
+??? solver
 ```
 
-### Paquete `factory`
+En `factory`, `FactoryMachine` representa una m?quina, `ButtonWiring` representa qu? posiciones afecta un bot?n y `MachineInitializer` contiene los algoritmos principales: b?squeda para luces y resoluci?n del sistema de voltajes.
 
-`ButtonWiring` representa un botón mediante una máscara de bits. Cada bit indica una luz que ese botón cambia.
+En `input`, `FactoryManualParser` convierte cada l?nea del manual en una `FactoryMachine`.
 
-`FactoryMachine` representa una máquina. Guarda cuántas luces tiene, cuál es la máscara objetivo, qué botones tiene disponibles y cuáles son los requisitos de voltaje.
+En `solver`, `FactorySolver<T>` es la interfaz com?n. `LightInitializationSolver` resuelve la parte 1 y devuelve `Integer`. `JoltageInitializationSolver` resuelve la parte 2 y devuelve `Long`.
 
-`MachineInitializer` calcula el mínimo de pulsaciones. Para parte 1 usa BFS sobre estados de luces. Para parte 2 resuelve el sistema de contadores como un sistema lineal con restricciones enteras no negativas.
+`FactoryPuzzle` coordina parser y estrategias.
 
-### Paquete `input`
+### Patrones usados en D?a 10
 
-`FactoryManualParser` convierte cada línea del manual en un `FactoryMachine`. Lee el diagrama de luces, extrae los botones, guarda los requisitos de voltaje y valida que los índices existan dentro del tamaño de la máquina.
-
-### `FactoryPuzzle`
-
-`FactoryPuzzle` coordina el Día 10. Recibe las líneas de entrada, usa el parser y suma el mínimo de pulsaciones de todas las máquinas.
-
-Tiene dos métodos separados:
-
-- `solvePartOne`, que configura las luces.
-- `solvePartTwo`, que configura los contadores de voltaje.
-
-También tiene un `main` que lee:
-
-```text
-src/main/resources/day10/input.txt
-```
-
-### Decisión de algoritmo
-
-Para la parte 1, pulsar un botón dos veces no ayuda porque deja las luces como estaban y solo suma dos pulsaciones. Por eso cada botón se puede tratar como si se usara una vez o ninguna.
-
-Uso máscaras de bits porque las luces solo tienen dos estados: encendida o apagada. Si un botón cambia varias luces, su efecto se aplica con XOR. Esto encaja bien con el problema y evita manejar listas de booleanos por todo el código.
-
-Para la parte 2 uso otra idea. Cada botón suma `1` a algunos contadores, así que el problema se puede ver como un sistema de ecuaciones: cuántas veces pulso cada botón para llegar exactamente a los requisitos. Reduzco el sistema lineal, enumero las pocas variables libres que quedan y compruebo soluciones enteras no negativas.
+Uso Strategy para separar el c?lculo de luces y el c?lculo de voltaje. Las dos partes usan las mismas m?quinas, pero el objetivo y el algoritmo son distintos.
 
 ### Principios aplicados
 
-### SRP
+SRP separa parseo, modelo de m?quina, algoritmos de inicializaci?n y estrategias por parte. DRY se mantiene porque `FactoryMachine` y `ButtonWiring` se reutilizan en las dos partes. KISS aparece en la separaci?n de dos algoritmos claros: BFS para luces y sistema lineal para voltajes. La encapsulaci?n est? en las copias defensivas de listas dentro de `FactoryMachine`.
 
-Cada clase tiene una responsabilidad clara:
+### Tests del D?a 10
 
-- `FactoryManualParser` parsea el texto del manual.
-- `FactoryMachine` representa una máquina.
-- `ButtonWiring` representa el efecto de un botón.
-- `MachineInitializer` calcula el mínimo de pulsaciones.
-- `FactoryPuzzle` coordina el flujo del día.
+Los tests cubren el ejemplo oficial de parte 1 con resultado `7` y parte 2 con resultado `33`. Tambi?n prueban parseo del manual, m?nimo de pulsaciones de luces, m?nimo de pulsaciones de voltaje y casos de validaci?n de m?quinas.
 
-### DRY
+## D?a 11: Reactor
 
-La conversión de luces, botones y voltajes está en el parser. La búsqueda del mínimo está solo en `MachineInitializer`.
+### Qu? pide el problema
 
-Parte 1 y parte 2 reutilizan `FactoryMachine` y `ButtonWiring`. Lo que cambia es la interpretación de los botones: en parte 1 alternan luces y en parte 2 suman voltaje.
+El D?a 11 trabaja con una red de dispositivos. Cada dispositivo puede enviar datos a otros dispositivos, as? que el problema se modela como un grafo dirigido.
 
-### KISS
+En la parte 1 se cuentan los caminos desde `you` hasta `out`.
 
-La solución de parte 1 mantiene una idea directa: partir del estado con todas las luces apagadas y buscar el camino más corto hasta la máscara objetivo. En parte 2 uso álgebra lineal porque probar pulsaciones una por una sería demasiado lento con requisitos grandes.
+En la parte 2 se cuentan los caminos desde `svr` hasta `out` que pasan por `dac` y `fft`, en cualquier orden.
 
-### YAGNI
+### Estructura del D?a 11
 
-La parte 2 se implementó cuando ya tenía el enunciado. Antes de eso los requisitos de voltaje se ignoraban porque el propio enunciado de parte 1 decía que no importaban.
-
-### Encapsulación
-
-`FactoryMachine` guarda sus botones como una copia de la lista recibida. El resto del código no modifica su estado interno.
-
-### Bajo acoplamiento
-
-`MachineInitializer` trabaja con `FactoryMachine`, no con líneas de texto. El formato del manual queda aislado en el parser.
-
-### Alta cohesión
-
-El paquete `factory` contiene solo conceptos de máquinas, botones y pulsaciones. El paquete `input` solo se encarga de parsear.
-
-## Tests del Día 10
-
-### `FactoryPuzzleTest`
-
-Comprueba:
-
-- El ejemplo oficial completo de parte 1, con resultado `7`.
-- El ejemplo oficial completo de parte 2, con resultado `33`.
-
-### `FactoryManualParserTest`
-
-Comprueba:
-
-- Parseo del diagrama de luces y los botones.
-- Ignorar líneas vacías.
-- Rechazo de input vacío.
-- Rechazo de líneas sin diagrama.
-- Rechazo de botones que apuntan a luces fuera del diagrama.
-- Rechazo de requisitos de voltaje con una cantidad distinta al diagrama.
-
-### `MachineInitializerTest`
-
-Comprueba:
-
-- Que si el objetivo ya es todo apagado, el mínimo es `0`.
-- Que se encuentra el mínimo de pulsaciones en una máquina concreta.
-- Que no se permite una máquina sin botones.
-- Que se encuentra el mínimo de pulsaciones de voltaje.
-- Que si los requisitos de voltaje ya son cero, el mínimo es `0`.
-
-## Día 11: Reactor
-
-### Qué pide el problema
-
-El Día 11 trata de una red de dispositivos conectados por salidas. Cada línea indica un dispositivo y a qué otros dispositivos puede enviar datos:
-
-```text
-you: bbb ccc
-bbb: ddd eee
-eee: out
-```
-
-Los datos solo avanzan siguiendo las salidas. La pregunta de la parte 1 es cuántos caminos distintos llevan desde `you` hasta `out`.
-
-Con el ejemplo oficial, hay:
-
-```text
-5
-```
-
-### Parte 2
-
-En la parte 2 cambia el punto de inicio y aparece una condición extra. Ahora hay que contar los caminos desde `svr` hasta `out`, pero solo cuentan los caminos que pasan por `dac` y por `fft`.
-
-El orden no importa: puede aparecer primero `dac` y luego `fft`, o al revés.
-
-Con el ejemplo oficial de la parte 2, el resultado es:
-
-```text
-2
-```
-
-### Estructura del Día 11
-
-El código del Día 11 está en `aoc.day11` y lo he dividido así:
+El c?digo est? en `aoc.day11`:
 
 ```text
 aoc.day11
-├── ReactorPuzzle.java
-├── input
-└── reactor
+??? ReactorPuzzle.java
+??? input
+??? reactor
+??? solver
 ```
 
-### Paquete `reactor`
+En `reactor`, `DeviceNetwork` representa el grafo y `PathCounter` contiene el conteo de caminos con memoizaci?n.
 
-`DeviceNetwork` representa la red dirigida de dispositivos. Guarda para cada dispositivo la lista de salidas a las que puede enviar datos.
+En `input`, `DeviceNetworkParser` convierte l?neas como `aaa: bbb ccc` en un `DeviceNetwork`.
 
-`PathCounter` cuenta los caminos desde un dispositivo inicial hasta uno final. Usa DFS con memoización para no recalcular los caminos de un mismo dispositivo varias veces.
+En `solver`, `ReactorSolver` es la interfaz com?n. `DirectPathSolver` resuelve la parte 1. `RequiredDevicePathSolver` resuelve la parte 2 con los dos dispositivos obligatorios.
 
-Para la parte 2, `PathCounter` también guarda en el estado si ya se visitó `dac` y si ya se visitó `fft`. Así puede contar solo los caminos válidos sin tener que guardar la ruta completa.
+`ReactorPuzzle` coordina parser y estrategias.
 
-### Paquete `input`
+### Patrones usados en D?a 11
 
-`DeviceNetworkParser` convierte líneas como `bbb: ddd eee` en un `DeviceNetwork`. También valida entradas vacías, líneas sin formato correcto y dispositivos duplicados.
-
-### `ReactorPuzzle`
-
-`ReactorPuzzle` coordina el Día 11. Recibe las líneas de entrada, usa el parser y llama al contador de caminos.
-
-Tiene dos métodos separados:
-
-- `solvePartOne`, que cuenta caminos desde `you` hasta `out`.
-- `solvePartTwo`, que cuenta caminos desde `svr` hasta `out` pasando por `dac` y `fft`.
-
-También tiene un `main` que lee:
-
-```text
-src/main/resources/day11/input.txt
-```
+Uso Strategy para separar el conteo directo de caminos y el conteo con visitas obligatorias. Las dos estrategias usan el mismo grafo y el mismo `PathCounter`, pero aplican reglas distintas.
 
 ### Principios aplicados
 
-### SRP
+SRP separa parser, grafo, contador de caminos y estrategias por parte. DRY aparece en `PathCounter`, que concentra el recorrido y la memoizaci?n. KISS se mantiene porque cada solver fija los nombres de dispositivos que pertenecen a su parte. La encapsulaci?n aparece en `DeviceNetwork`, que oculta el mapa interno de salidas.
 
-Cada clase tiene una responsabilidad clara:
+### Tests del D?a 11
 
-- `DeviceNetworkParser` parsea la entrada.
-- `DeviceNetwork` representa el grafo dirigido.
-- `PathCounter` cuenta caminos simples y caminos con dispositivos obligatorios.
-- `ReactorPuzzle` coordina el flujo del día.
+Los tests cubren el ejemplo oficial de parte 1 con resultado `5` y parte 2 con resultado `2`. Tambi?n prueban parseo de red, conteo de caminos, visitas obligatorias, dispositivo inicial inexistente y detecci?n de ciclos.
 
-### DRY
+## D?a 12: Christmas Tree Farm
 
-La lógica de recorrer caminos está solo en `PathCounter`. El parser no sabe contar caminos y el puzzle no sabe cómo se recorren internamente.
+### Qu? pide el problema
 
-Parte 1 y parte 2 reutilizan el mismo parser y el mismo `DeviceNetwork`. Lo que cambia es el estado que usa el contador.
+El D?a 12 trabaja con formas de regalos y regiones debajo de ?rboles. Cada forma est? dibujada con `#` y `.`, y cada regi?n indica cu?ntos regalos de cada forma hay que colocar.
 
-### KISS
+La soluci?n cuenta cu?ntas regiones pueden contener todos sus regalos sin solapamientos entre celdas ocupadas `#`. Las formas se pueden rotar y voltear.
 
-La solución usa DFS con memoización, que es una forma directa de contar caminos en una red dirigida.
+### Estructura del D?a 12
 
-### YAGNI
-
-La parte 2 se implementó cuando ya tenía el enunciado. Antes de eso no añadí comportamiento inventado.
-
-### Encapsulación
-
-`DeviceNetwork` oculta el mapa interno de salidas. Desde fuera solo se pregunta por las salidas de un dispositivo.
-
-### Bajo acoplamiento
-
-`PathCounter` trabaja con `DeviceNetwork`, no con líneas de texto. El formato del archivo queda aislado en el parser.
-
-### Alta cohesión
-
-El paquete `reactor` contiene solo conceptos de la red del reactor. El paquete `input` solo parsea texto.
-
-## Tests del Día 11
-
-### `ReactorPuzzleTest`
-
-Comprueba:
-
-- El ejemplo oficial completo de parte 1, con resultado `5`.
-- El ejemplo oficial completo de parte 2, con resultado `2`.
-
-### `DeviceNetworkParserTest`
-
-Comprueba:
-
-- Parseo de salidas de dispositivos.
-- Ignorar líneas vacías.
-- Rechazo de input vacío.
-- Rechazo de líneas sin un único separador `:`.
-- Rechazo de dispositivos duplicados.
-
-### `PathCounterTest`
-
-Comprueba:
-
-- Conteo de un único camino.
-- Conteo de caminos con bifurcaciones.
-- Conteo de caminos que visitan los dos dispositivos obligatorios.
-- Conteo cuando los dispositivos obligatorios aparecen en el otro orden.
-- Ignorar caminos a los que les falta uno de los dispositivos obligatorios.
-- Rechazo de dispositivo inicial inexistente.
-- Detección de ciclos para evitar recursión infinita.
-
-## Día 12: Christmas Tree Farm
-
-### Qué pide el problema
-
-El Día 12 trata de encajar regalos debajo de árboles de Navidad. La entrada tiene dos secciones.
-
-Primero aparecen las formas de los regalos. Cada forma tiene un índice y un dibujo con `#` y `.`:
-
-```text
-4:
-###
-#..
-###
-```
-
-Los `#` son las partes reales del regalo. Los `.` solo son huecos del dibujo y no bloquean a otros regalos.
-
-Después aparecen las regiones debajo de los árboles. Cada línea indica el tamaño de la región y cuántos regalos de cada forma hay que colocar:
-
-```text
-4x4: 0 0 0 0 2 0
-```
-
-Esto significa que la región mide 4 de ancho y 4 de largo, y que hay que colocar dos regalos de la forma con índice 4.
-
-Los regalos se pueden rotar y girar, pero siempre tienen que estar alineados con la cuadrícula. No pueden solaparse en celdas `#`, aunque los huecos `.` de una forma no ocupan espacio real.
-
-La parte 1 pide contar cuántas regiones pueden encajar todos los regalos que tienen asignados. Con el ejemplo oficial, el resultado es:
-
-```text
-2
-```
-
-### Parte 2
-
-La parte 2 de este día no añade un cálculo nuevo. El texto que aparece después de la parte 1 es narrativo y no pide procesar el input otra vez ni obtener otra respuesta numérica. Con la solución de la parte 1, el Día 12 queda completo.
-
-### Estructura del Día 12
-
-El código del Día 12 está en `aoc.day12` y lo he dividido así:
+El c?digo est? en `aoc.day12`:
 
 ```text
 aoc.day12
-├── ChristmasTreeFarmPuzzle.java
-├── farm
-└── input
+??? ChristmasTreeFarmPuzzle.java
+??? farm
+??? input
+??? solver
 ```
 
-### Paquete `farm`
+En `farm`, `PresentShape` representa una forma, `ShapeOrientation` representa una orientaci?n normalizada, `TreeRegion` representa una regi?n, `FarmSummary` agrupa el input parseado y `PresentFitter` comprueba si los regalos caben.
 
-`GridCell` representa una celda ocupada dentro de una forma.
+En `input`, `FarmSummaryParser` lee las formas y las regiones.
 
-`PresentShape` representa una forma de regalo. Guarda sus celdas ocupadas y genera sus orientaciones posibles usando rotaciones y volteos. También elimina orientaciones repetidas, porque algunas formas pueden verse igual después de girarlas.
+En `solver`, `ChristmasTreeFarmSolver` define el caso de uso sobre un `FarmSummary`. `FittingRegionSolver` resuelve la parte implementada contando las regiones donde caben los regalos.
 
-`ShapeOrientation` representa una orientación concreta de una forma. Tiene sus celdas, anchura y altura ya normalizadas.
+`ChristmasTreeFarmPuzzle` coordina parser y solver.
 
-`TreeRegion` representa una zona debajo de un árbol. Guarda el ancho, el largo y cuántos regalos de cada forma hay que colocar.
+### Patrones usados en D?a 12
 
-`FarmSummary` agrupa las formas y las regiones parseadas desde el input.
-
-`PresentFitter` contiene el algoritmo que decide si una región puede encajar sus regalos. Genera todas las posiciones posibles de cada orientación dentro de la región y luego usa backtracking para intentar colocarlas sin solapamientos.
-
-### Paquete `input`
-
-`FarmSummaryParser` convierte las líneas del archivo en un `FarmSummary`.
-
-Este parser se encarga de leer las formas, validar caracteres, leer las dimensiones de cada región y comprobar que cada región tenga una cantidad para cada forma. Así el solver no depende del formato textual del archivo.
-
-### `ChristmasTreeFarmPuzzle`
-
-`ChristmasTreeFarmPuzzle` coordina el Día 12. Recibe las líneas de entrada, usa `FarmSummaryParser` y después llama a `PresentFitter` para contar las regiones que sí pueden encajar sus regalos.
-
-Tiene `solvePartOne` porque es la única parte con cálculo real en este día.
-
-### Decisión de algoritmo
-
-Para cada región, primero calculo el área total que ocuparían los regalos. Si esa área es mayor que el área de la región, ya sé que no pueden caber y no sigo probando.
-
-En las regiones grandes del input real, después de esa comprobación de área ya no hago un backtracking enorme, porque sería demasiado lento y no aporta nada práctico para el tamaño de esas regiones. Para los casos pequeños, como el ejemplo oficial, sí genero las colocaciones posibles de cada forma en la región. Cada colocación se guarda con un `BitSet`, porque así comprobar si dos regalos se solapan es rápido: basta con ver si sus bits se cruzan.
-
-Después uso backtracking. En cada paso elijo una forma que todavía queda por colocar y pruebo sus posiciones compatibles con lo ya ocupado. Si una rama se bloquea, vuelvo atrás y pruebo otra colocación.
-
-No simulo los puntos `.` como si ocuparan espacio, porque el enunciado dice que esos huecos no bloquean a otros regalos.
+Uso una capa de solver para separar el caso de uso del parser y del algoritmo de encaje. Tambi?n hay polimorfismo interno en las transformaciones de `PresentShape`, porque cada transformaci?n sabe c?mo convertir una celda.
 
 ### Principios aplicados
 
-### SRP
+SRP separa parseo, formas, regiones y encaje. DRY aparece en `PresentShape.orientations()`, que centraliza rotaciones y volteos. KISS se mantiene usando `BitSet` para representar colocaciones ocupadas y comprobar solapamientos. La encapsulaci?n est? en las copias defensivas de `FarmSummary`, `TreeRegion`, `PresentShape` y `ShapeOrientation`.
 
-Cada clase tiene una responsabilidad clara:
+### Tests del D?a 12
 
-- `FarmSummaryParser` parsea la entrada.
-- `PresentShape` representa una forma y calcula sus orientaciones.
-- `TreeRegion` representa una región.
-- `PresentFitter` decide si los regalos caben.
-- `ChristmasTreeFarmPuzzle` coordina el flujo del día.
-
-### DRY
-
-La generación de orientaciones está solo en `PresentShape`. El backtracking no repite cómo se rota o se voltea una forma.
-
-El parser está separado, así que no se repite el tratamiento del formato de entrada en el solver ni en los tests.
-
-### KISS
-
-Aunque el problema es más difícil que otros días, la solución sigue una idea defendible: generar colocaciones válidas y probar combinaciones sin solapamiento.
-
-### YAGNI
-
-Solo está implementada la parte 1 porque la parte 2 no pide una regla nueva.
-
-### Encapsulación
-
-Las formas exponen orientaciones ya normalizadas, pero no obligan al resto del código a conocer los detalles internos de rotación y volteo.
-
-`TreeRegion` y `FarmSummary` copian sus listas para que no se modifique su contenido desde fuera.
-
-### Bajo acoplamiento
-
-`PresentFitter` trabaja con objetos del dominio, no con texto del archivo. El formato del input queda aislado en `FarmSummaryParser`.
-
-### Alta cohesión
-
-El paquete `farm` contiene solo conceptos del problema de los regalos y regiones. El paquete `input` solo se encarga de convertir texto en esos objetos.
-
-## Tests del Día 12
-
-### `ChristmasTreeFarmPuzzleTest`
-
-Comprueba el ejemplo oficial completo de la parte 1, con resultado `2`.
-
-### `FarmSummaryParserTest`
-
-Comprueba:
-
-- Parseo de formas y regiones.
-- Rechazo de caracteres desconocidos en una forma.
-- Rechazo de regiones con una cantidad de regalos distinta al número de formas.
-
-### `PresentShapeTest`
-
-Comprueba:
-
-- Que se generan orientaciones únicas usando rotaciones y volteos.
-- Que el área de una forma se calcula contando solo sus celdas `#`.
-
-### `PresentFitterTest`
-
-Comprueba:
-
-- Que dos regalos de la forma del ejemplo pueden caber en una región `4x4`.
-- Que se rechaza una región si el área total necesaria es demasiado grande.
-- Que se rechaza una forma que no puede colocarse dentro de una región por sus dimensiones.
+Los tests cubren el ejemplo oficial con resultado `2`. Tambi?n prueban parseo del resumen, orientaciones de formas, encaje de regalos, rechazo por ?rea insuficiente y rechazo de formas que no pueden colocarse por dimensiones.
