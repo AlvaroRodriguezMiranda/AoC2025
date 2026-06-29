@@ -1,38 +1,27 @@
 package aoc.day04.paper;
 
-import java.util.ArrayList;
-import java.util.List;
+import aoc.day04.solver.PaperRollSolver;
+import aoc.day04.solver.AccessibleRollSolver;
+import aoc.day04.solver.RemovableRollSolver;
 
 public final class ForkliftAccessSolver {
-    private static final int MAXIMUM_ACCESSIBLE_ADJACENT_ROLLS = 3;
+    private final PaperRollSolver partOneSolver;
+    private final PaperRollSolver partTwoSolver;
+
+    public ForkliftAccessSolver() {
+        this(new AccessibleRollSolver(), new RemovableRollSolver());
+    }
+
+    public ForkliftAccessSolver(PaperRollSolver partOneSolver, PaperRollSolver partTwoSolver) {
+        this.partOneSolver = partOneSolver;
+        this.partTwoSolver = partTwoSolver;
+    }
 
     public int countAccessibleRolls(PaperRollGrid paperRollGrid) {
-        return accessibleRollPositions(paperRollGrid).size();
+        return partOneSolver.solve(paperRollGrid);
     }
 
     public int countRemovableRolls(PaperRollGrid paperRollGrid) {
-        int removedRolls = 0;
-        PaperRollGrid currentGrid = paperRollGrid;
-
-        List<GridPosition> accessiblePositions = accessibleRollPositions(currentGrid);
-        while (!accessiblePositions.isEmpty()) {
-            removedRolls += accessiblePositions.size();
-            currentGrid = currentGrid.withoutPaperRolls(accessiblePositions);
-            accessiblePositions = accessibleRollPositions(currentGrid);
-        }
-
-        return removedRolls;
-    }
-
-    private List<GridPosition> accessibleRollPositions(PaperRollGrid paperRollGrid) {
-        List<GridPosition> accessiblePositions = new ArrayList<>();
-
-        for (GridPosition position : paperRollGrid.paperRollPositions()) {
-            if (paperRollGrid.adjacentPaperRolls(position) <= MAXIMUM_ACCESSIBLE_ADJACENT_ROLLS) {
-                accessiblePositions.add(position);
-            }
-        }
-
-        return accessiblePositions;
+        return partTwoSolver.solve(paperRollGrid);
     }
 }

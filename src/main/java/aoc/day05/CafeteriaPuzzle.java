@@ -3,6 +3,8 @@ package aoc.day05;
 import aoc.day05.input.InventoryDatabaseParser;
 import aoc.day05.inventory.FreshIngredientCounter;
 import aoc.day05.inventory.InventoryDatabase;
+import aoc.day05.solver.AllFreshIngredientSolver;
+import aoc.day05.solver.AvailableFreshIngredientSolver;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -34,7 +36,7 @@ public final class CafeteriaPuzzle {
     public static void main(String[] args) throws IOException {
         CafeteriaPuzzle puzzle = new CafeteriaPuzzle(
                 new InventoryDatabaseParser(),
-                new FreshIngredientCounter()
+                new FreshIngredientCounter(new AvailableFreshIngredientSolver(), new AllFreshIngredientSolver())
         );
         List<String> inputLines = Files.readAllLines(Path.of("src/main/resources/day05/input.txt"));
         System.out.println("Part 1: " + puzzle.solvePartOne(inputLines));

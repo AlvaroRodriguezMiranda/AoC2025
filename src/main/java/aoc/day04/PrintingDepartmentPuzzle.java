@@ -3,6 +3,8 @@ package aoc.day04;
 import aoc.day04.input.PaperRollMapParser;
 import aoc.day04.paper.ForkliftAccessSolver;
 import aoc.day04.paper.PaperRollGrid;
+import aoc.day04.solver.AccessibleRollSolver;
+import aoc.day04.solver.RemovableRollSolver;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -31,7 +33,7 @@ public final class PrintingDepartmentPuzzle {
     public static void main(String[] args) throws IOException {
         PrintingDepartmentPuzzle puzzle = new PrintingDepartmentPuzzle(
                 new PaperRollMapParser(),
-                new ForkliftAccessSolver()
+                new ForkliftAccessSolver(new AccessibleRollSolver(), new RemovableRollSolver())
         );
         List<String> inputLines = Files.readAllLines(Path.of("src/main/resources/day04/input.txt"));
         System.out.println("Part 1: " + puzzle.solvePartOne(inputLines));

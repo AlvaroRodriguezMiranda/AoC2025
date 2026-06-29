@@ -128,473 +128,131 @@ SRP separa parseo, modelo y cálculo por parte. DRY queda en `BatteryBank.maximu
 
 Los tests cubren los ejemplos oficiales: parte 1 con resultado `357` y parte 2 con resultado `3121910778619`. También verifican que el algoritmo respeta el orden original, que no ordena los dígitos, que funciona con doce baterías y que rechaza bancos o cantidades inválidas.
 
-## Día 4: Printing Department
+## D?a 4: Printing Department
 
-### Qué pide el problema
+### Qu? pide el problema
 
-El Día 4 trata de un mapa donde aparecen rollos de papel marcados con `@` y espacios vacíos marcados con `.`.
+El D?a 4 trata de un mapa donde aparecen rollos de papel marcados con `@` y espacios vac?os marcados con `.`.
 
-Los montacargas solo pueden acceder a un rollo de papel si hay menos de cuatro rollos de papel en las ocho posiciones adyacentes. Esas ocho posiciones incluyen horizontal, vertical y diagonal.
+En la parte 1 hay que contar los rollos accesibles para los montacargas. Un rollo es accesible cuando tiene menos de cuatro rollos en las ocho posiciones adyacentes.
 
-Con el ejemplo oficial:
+En la parte 2 los rollos accesibles se retiran por rondas. Despu?s de cada retirada, el mapa cambia y se vuelven a buscar rollos accesibles hasta que no queda ninguno que pueda retirarse.
 
-```text
-..@@.@@@@.
-@@@.@.@.@@
-@@@@@.@.@@
-@.@@@@..@.
-@@.@@@@.@@
-.@@@@@@@.@
-.@.@.@.@@@
-@.@@@.@@@@
-.@@@@@@@@.
-@.@.@@@.@.
-```
+### Estructura del D?a 4
 
-El resultado de la parte 1 es:
-
-```text
-13
-```
-
-### Parte 2
-
-En la parte 2 los rollos accesibles se pueden retirar. Después de retirarlos, el mapa cambia, porque algunos rollos que antes tenían demasiados vecinos pueden quedar ahora con menos de cuatro.
-
-La regla se repite por rondas:
-
-1. Buscar todos los rollos accesibles en el estado actual.
-2. Quitarlos del mapa.
-3. Volver a calcular accesibilidad.
-4. Parar cuando ya no haya rollos accesibles.
-
-Con el ejemplo oficial, el total de rollos que se pueden retirar es:
-
-```text
-43
-```
-
-### Estructura del Día 4
-
-El código del Día 4 está en `aoc.day04` y lo he dividido así:
+El c?digo est? en `aoc.day04`:
 
 ```text
 aoc.day04
-├── PrintingDepartmentPuzzle.java
-├── input
-└── paper
+??? PrintingDepartmentPuzzle.java
+??? input
+??? paper
+??? solver
 ```
 
-### Paquete `paper`
+En `paper`, `GridPosition` representa una coordenada y `PaperRollGrid` encapsula la cuadr?cula. La cuadr?cula sabe si hay un rollo en una posici?n, cuenta vecinos y puede crear una nueva cuadr?cula sin los rollos retirados.
 
-`GridPosition` representa una posición dentro del mapa usando fila y columna.
+En `input`, `PaperRollMapParser` convierte las l?neas del archivo en un `PaperRollGrid` y valida los caracteres permitidos.
 
-`PaperRollGrid` representa la cuadrícula. Sabe si hay un rollo de papel en una posición, cuenta los rollos adyacentes y devuelve todas las posiciones donde hay rollos.
+En `solver`, `PaperRollSolver` es la interfaz com?n para las estrategias. `AccessibleRollSolver` resuelve la parte 1 contando rollos accesibles. `RemovableRollSolver` resuelve la parte 2 aplicando rondas de retirada. `ForkliftAccessSolver` queda como fachada para usar ambas estrategias desde el puzzle y desde los tests.
 
-`ForkliftAccessSolver` aplica la regla del problema: un rollo es accesible si tiene como máximo tres rollos adyacentes, porque el enunciado dice "fewer than four". Para la parte 2 repite el proceso de retirada hasta que no queden más rollos accesibles.
+`PrintingDepartmentPuzzle` coordina parser y solver.
 
-### Paquete `input`
+### Patrones usados en D?a 4
 
-`PaperRollMapParser` convierte las líneas de texto en un `PaperRollGrid`. También valida que el mapa solo tenga `@` y `.`, y que la cuadrícula sea rectangular.
-
-### `PrintingDepartmentPuzzle`
-
-`PrintingDepartmentPuzzle` coordina el Día 4. Recibe las líneas de entrada, usa el parser y llama al solver.
-
-También tiene un `main` que lee:
-
-```text
-src/main/resources/day04/input.txt
-```
+Uso Strategy para separar la regla de la parte 1 y la regla de la parte 2. Las dos trabajan con el mismo modelo (`PaperRollGrid`), pero una solo cuenta accesibles y la otra repite retiradas.
 
 ### Principios aplicados
 
-### SRP
+SRP queda repartido entre parser, modelo de cuadr?cula y estrategias de soluci?n. DRY se mantiene porque la regla de accesibilidad se reutiliza al contar accesibles y al retirar por rondas. KISS se mantiene con una fachada peque?a y dos estrategias directas. La cuadr?cula encapsula su representaci?n interna y devuelve una nueva cuadr?cula cuando se retiran rollos.
 
-Cada clase tiene una responsabilidad clara:
+### Tests del D?a 4
 
-- `GridPosition` representa coordenadas.
-- `PaperRollGrid` modela la cuadrícula.
-- `PaperRollMapParser` parsea la entrada.
-- `ForkliftAccessSolver` cuenta los rollos accesibles.
-- `PrintingDepartmentPuzzle` coordina el flujo del día.
+Los tests cubren el ejemplo oficial de parte 1 con resultado `13` y parte 2 con resultado `43`. Tambi?n prueban el conteo de vecinos, mapas inv?lidos, rollos con cuatro vecinos y retiradas acumuladas en varias rondas.
 
-### DRY
+## D?a 5: Cafeteria
 
-La lógica para contar vecinos está solo en `PaperRollGrid`. El solver reutiliza ese método tanto para parte 1 como para parte 2 y no repite cómo se recorren las ocho direcciones.
+### Qu? pide el problema
 
-### KISS
+El D?a 5 trabaja con rangos de ingredientes frescos y con una lista de ingredientes disponibles.
 
-La solución es directa: recorro los rollos de papel, cuento sus vecinos y aplico la regla de menos de cuatro.
+En la parte 1 se cuenta cu?ntos ingredientes disponibles est?n dentro de alg?n rango fresco. Si un ingrediente cae en varios rangos solapados, sigue contando una sola vez porque aparece una sola vez en la lista de disponibles.
 
-### YAGNI
+En la parte 2 ya no se usa la lista de disponibles. Hay que contar cu?ntos IDs distintos est?n cubiertos por todos los rangos frescos, fusionando rangos solapados o adyacentes.
 
-La parte 2 se implementó cuando tuve el enunciado. Antes de eso no añadí comportamiento inventado.
+### Estructura del D?a 5
 
-### Encapsulación
-
-`PaperRollGrid` oculta cómo se guarda internamente el mapa. Desde fuera se pregunta por posiciones y vecinos, pero no se manipula directamente la lista de filas.
-
-### Bajo acoplamiento
-
-`ForkliftAccessSolver` no depende del texto original del input. Trabaja con `PaperRollGrid`, que ya es parte del dominio.
-
-### Alta cohesión
-
-El paquete `paper` contiene solo conceptos del mapa y los rollos. El paquete `input` solo se encarga de parsear.
-
-## Tests del Día 4
-
-### `PrintingDepartmentPuzzleTest`
-
-Comprueba:
-
-- El ejemplo oficial de parte 1, con resultado `13`.
-- El ejemplo oficial de parte 2, con resultado `43`.
-
-### `PaperRollMapParserTest`
-
-Comprueba:
-
-- Parseo de un mapa válido.
-- Ignorar líneas vacías.
-- Rechazo de caracteres que no sean `@` o `.`.
-- Rechazo de mapas no rectangulares.
-
-### `PaperRollGridTest`
-
-Comprueba:
-
-- Detección de rollos en posiciones concretas.
-- Conteo de vecinos en las ocho direcciones.
-- Conteo correcto en bordes del mapa.
-- Devolver todas las posiciones con rollos.
-- Crear una nueva cuadrícula sin algunos rollos, sin modificar la original.
-
-### `ForkliftAccessSolverTest`
-
-Comprueba:
-
-- Que los rollos con menos de cuatro vecinos se cuentan como accesibles.
-- Que un rollo con cuatro vecinos no se cuenta como accesible.
-- Que las retiradas se acumulan correctamente durante varias rondas.
-
-## Día 5: Cafeteria
-
-### Qué pide el problema
-
-El Día 5 trata de una base de datos de ingredientes. El archivo tiene dos partes separadas por una línea en blanco.
-
-Primero aparecen rangos de IDs frescos:
-
-```text
-3-5
-10-14
-16-20
-12-18
-```
-
-Después aparecen IDs de ingredientes disponibles:
-
-```text
-1
-5
-8
-11
-17
-32
-```
-
-Los rangos son inclusivos. Por ejemplo, `3-5` contiene `3`, `4` y `5`. Además, los rangos pueden solaparse, pero un ingrediente cuenta una sola vez porque lo que se pregunta es si ese ingrediente disponible es fresco o no.
-
-Con el ejemplo oficial, hay 3 ingredientes frescos disponibles.
-
-### Parte 2
-
-En la parte 2 ya no importan los ingredientes disponibles de la segunda sección. Lo que se pide es contar cuántos IDs distintos son considerados frescos por todos los rangos.
-
-Con el ejemplo:
-
-```text
-3-5
-10-14
-16-20
-12-18
-```
-
-Los IDs frescos son `3`, `4`, `5` y todos los IDs del `10` al `20`. En total son:
-
-```text
-14
-```
-
-Para resolverlo no enumero todos los IDs uno por uno. Ordeno los rangos por inicio, fusiono los que se solapan o quedan unidos, y después sumo el tamaño de los rangos resultantes.
-
-### Estructura del Día 5
-
-El código del Día 5 está en `aoc.day05` y lo he dividido así:
+El c?digo est? en `aoc.day05`:
 
 ```text
 aoc.day05
-├── CafeteriaPuzzle.java
-├── input
-└── inventory
+??? CafeteriaPuzzle.java
+??? input
+??? inventory
+??? solver
 ```
 
-### Paquete `inventory`
+En `inventory`, `IngredientIdRange` representa un rango inclusivo, `InventoryDatabase` agrupa los rangos frescos y los IDs disponibles, y `FreshIngredientCounter` act?a como fachada para las dos estrategias.
 
-`IngredientIdRange` representa un rango inclusivo de IDs frescos. Tiene el método `contains` para saber si un ID está dentro.
+En `input`, `InventoryDatabaseParser` lee las dos secciones del archivo: primero los rangos, luego la l?nea en blanco y despu?s los IDs disponibles.
 
-`InventoryDatabase` agrupa los rangos frescos y los IDs disponibles. Así el solver recibe un objeto del dominio en vez de trabajar directamente con líneas de texto.
+En `solver`, `FreshIngredientSolver` es la interfaz com?n. `AvailableFreshIngredientSolver` resuelve la parte 1 revisando los IDs disponibles. `AllFreshIngredientSolver` resuelve la parte 2 ordenando y fusionando rangos para contar cada ID fresco una sola vez.
 
-`FreshIngredientCounter` cuenta cuántos IDs disponibles caen dentro de al menos un rango fresco para la parte 1. Para la parte 2 cuenta cuántos IDs distintos cubren los rangos frescos, fusionando solapamientos.
+`CafeteriaPuzzle` coordina parser y contador.
 
-### Paquete `input`
+### Patrones usados en D?a 5
 
-`InventoryDatabaseParser` lee las dos secciones del archivo. Primero parsea los rangos, luego detecta la línea en blanco y después parsea los IDs disponibles.
-
-### `CafeteriaPuzzle`
-
-`CafeteriaPuzzle` coordina el Día 5. Recibe las líneas de entrada, usa el parser y llama al contador.
-
-También tiene un `main` que lee:
-
-```text
-src/main/resources/day05/input.txt
-```
+Uso Strategy porque las dos partes responden preguntas distintas sobre los mismos datos. La parte 1 trabaja sobre IDs disponibles y la parte 2 trabaja sobre rangos completos, pero ambas se exponen como `FreshIngredientSolver`.
 
 ### Principios aplicados
 
-### SRP
+SRP separa parseo, modelo de inventario y c?lculo. DRY aparece en `IngredientIdRange.contains(...)`, que concentra la comprobaci?n de pertenencia a un rango. KISS se mantiene porque la parte 2 no enumera todos los IDs: ordena rangos, los fusiona y suma tama?os. La encapsulaci?n est? en `InventoryDatabase`, que copia las listas recibidas.
 
-Cada clase tiene una responsabilidad clara:
+### Tests del D?a 5
 
-- `IngredientIdRange` representa un rango.
-- `InventoryDatabase` agrupa los datos del archivo ya parseados.
-- `InventoryDatabaseParser` parsea la entrada.
-- `FreshIngredientCounter` cuenta ingredientes frescos.
-- `CafeteriaPuzzle` coordina el flujo del día.
+Los tests cubren el ejemplo oficial de parte 1 con resultado `3` y parte 2 con resultado `14`. Tambi?n prueban ingredientes dentro de rangos, rangos solapados, rangos separados y rangos adyacentes.
 
-### DRY
+## D?a 6: Trash Compactor
 
-La lógica para comprobar si un ID está dentro de un rango está solo en `IngredientIdRange`.
+### Qu? pide el problema
 
-### KISS
+El D?a 6 trabaja con una hoja de operaciones escrita en columnas. Cada bloque de columnas representa un problema matem?tico con varios n?meros y una operaci?n.
 
-La solución de parte 1 es directa: para cada ingrediente disponible, compruebo si aparece en algún rango fresco. En parte 2 ordeno y fusiono rangos para contar la unión sin recorrer cada ID.
+En la parte 1 los problemas se leen de arriba hacia abajo. En la parte 2 se leen por columnas de derecha a izquierda, formando n?meros de otra manera. Despu?s de parsear, el c?lculo sigue siendo sumar el resultado de todos los problemas.
 
-### YAGNI
+### Estructura del D?a 6
 
-La parte 2 se implementó cuando tuve el enunciado. Antes de eso no añadí comportamiento inventado.
-
-### Encapsulación
-
-`InventoryDatabase` guarda copias de las listas que recibe, así no se modifica su contenido desde fuera sin control.
-
-### Bajo acoplamiento
-
-`FreshIngredientCounter` no sabe nada del formato del archivo. Trabaja con `InventoryDatabase`, que ya es un objeto del dominio.
-
-### Alta cohesión
-
-El paquete `inventory` trata solo conceptos del inventario. El paquete `input` solo se encarga del parseo.
-
-## Tests del Día 5
-
-### `CafeteriaPuzzleTest`
-
-Comprueba:
-
-- El ejemplo oficial de parte 1, con resultado `3`.
-- El ejemplo oficial de parte 2, con resultado `14`.
-
-### `InventoryDatabaseParserTest`
-
-Comprueba:
-
-- Parseo de un rango.
-- Parseo de las dos secciones separadas por una línea en blanco.
-- Rechazo de una base de datos sin separador.
-- Rechazo de rangos con formato inválido.
-
-### `IngredientIdRangeTest`
-
-Comprueba:
-
-- IDs dentro y fuera de un rango.
-- Rechazo de rangos donde el inicio es mayor que el final.
-
-### `FreshIngredientCounterTest`
-
-Comprueba:
-
-- Conteo de ingredientes disponibles que están en algún rango fresco.
-- Que un ingrediente se cuenta una sola vez aunque caiga en rangos solapados.
-- Conteo total de IDs frescos fusionando rangos solapados.
-- Conteo de rangos separados.
-- Conteo de rangos adyacentes como una zona continua.
-
-## Día 6: Trash Compactor
-
-### Qué pide el problema
-
-El Día 6 trata de una hoja de ejercicios de matemáticas escrita de una forma rara. Los problemas están colocados uno al lado de otro, pero cada problema se lee en vertical.
-
-Cada bloque tiene varios números y al final aparece el operador:
-
-```text
-123 328  51 64
- 45 64  387 23
-  6 98  215 314
-*   +   *   +
-```
-
-En ese ejemplo hay cuatro problemas:
-
-- `123 * 45 * 6`
-- `328 + 64 + 98`
-- `51 * 387 * 215`
-- `64 + 23 + 314`
-
-La respuesta que se pide es la suma de todos los resultados. En el ejemplo oficial, el total es:
-
-```text
-4277556
-```
-
-### Parte 2
-
-En la parte 2 el problema cambia porque la matemática de los cefalópodos se lee de derecha a izquierda por columnas.
-
-La entrada es exactamente la misma, pero ahora cada columna forma un número. Dentro de cada columna, el dígito más importante está arriba y el menos importante está abajo. Los problemas siguen separados por columnas vacías y el operador sigue estando en la parte inferior del bloque.
-
-Con el ejemplo oficial, los problemas ya no son los mismos que en la parte 1. Ahora se leen así:
-
-- `4 + 431 + 623`
-- `175 * 581 * 32`
-- `8 + 248 + 369`
-- `356 * 24 * 1`
-
-El resultado del ejemplo oficial para la parte 2 es:
-
-```text
-3263827
-```
-
-### Estructura del Día 6
-
-El código del Día 6 está en `aoc.day06` y lo he dividido así:
+El c?digo est? en `aoc.day06`:
 
 ```text
 aoc.day06
-├── TrashCompactorPuzzle.java
-├── input
-└── worksheet
+??? TrashCompactorPuzzle.java
+??? input
+??? worksheet
+??? solver
 ```
 
-### Paquete `worksheet`
+En `worksheet`, `MathProblem` representa un problema y `MathOperation` representa la operaci?n. `WorksheetSolver` suma los resultados de una lista de problemas.
 
-`MathOperation` representa las operaciones posibles: suma y multiplicación. Cada operación sabe aplicarse sobre una lista de números.
+En `input`, `WorksheetParser` se encarga de dividir la hoja en bloques de columnas y convertir cada bloque en objetos `MathProblem`. Tiene un m?todo para la lectura de parte 1 y otro para la lectura de parte 2.
 
-`MathProblem` representa un problema concreto, con sus números y su operación.
+En `solver`, `TrashCompactorSolver` es la interfaz com?n. `TopToBottomWorksheetSolver` resuelve la parte 1 usando la lectura vertical. `RightToLeftWorksheetSolver` resuelve la parte 2 usando la lectura de derecha a izquierda.
 
-`WorksheetSolver` suma los resultados de todos los problemas.
+`TrashCompactorPuzzle` coordina las dos estrategias.
 
-### Paquete `input`
+### Patrones usados en D?a 6
 
-`WorksheetParser` reconstruye los problemas desde las líneas horizontales de la hoja.
+Uso Strategy para separar los dos modos de resolver el d?a: lectura vertical y lectura de derecha a izquierda.
 
-La parte importante del parser es detectar columnas vacías. Una columna completamente vacía separa un problema del siguiente. Después, cada bloque se lee de arriba abajo: los números se parsean y el símbolo final indica la operación.
-
-Para la parte 2 reutilizo la misma separación por columnas vacías, pero cambio la forma de leer cada bloque. En vez de leer filas completas, leo las columnas de derecha a izquierda y formo los números con los dígitos que aparecen de arriba abajo.
-
-### `TrashCompactorPuzzle`
-
-`TrashCompactorPuzzle` coordina el Día 6. Recibe las líneas de entrada, usa el parser y llama al solver.
-
-Tiene dos métodos separados:
-
-- `solvePartOne`, que usa la lectura vertical normal de la parte 1.
-- `solvePartTwo`, que usa la lectura por columnas de derecha a izquierda.
-
-También tiene un `main` que lee:
-
-```text
-src/main/resources/day06/input.txt
-```
-
-### Patrones usados en Día 6
-
-`MathOperation.fromSymbol` funciona como un Factory Method sencillo, porque centraliza cómo se convierte `+` o `*` en una operación del dominio.
+Uso Factory Method en `MathOperation.fromSymbol(...)`, que centraliza c?mo se convierte `+` o `*` en una operaci?n del dominio.
 
 ### Principios aplicados
 
-### SRP
+SRP separa interpretaci?n de la hoja, representaci?n de problemas, operaciones matem?ticas y solvers por parte. DRY se mantiene porque `MathProblem`, `MathOperation` y `WorksheetSolver` se reutilizan en las dos partes. KISS se mantiene con dos estrategias peque?as que solo cambian el m?todo de parseo. La encapsulaci?n aparece en `MathProblem`, que copia la lista de n?meros.
 
-Cada clase tiene una responsabilidad clara:
+### Tests del D?a 6
 
-- `WorksheetParser` reconstruye problemas desde texto.
-- `MathProblem` representa un problema.
-- `MathOperation` representa la operación.
-- `WorksheetSolver` suma resultados.
-- `TrashCompactorPuzzle` coordina el flujo del día.
-
-### DRY
-
-La lógica de suma y multiplicación está en `MathOperation`, no repetida en el parser ni en el solver.
-
-La parte 1 y la parte 2 también reutilizan `MathProblem`, `MathOperation` y `WorksheetSolver`. Lo que cambia es solo la forma de reconstruir los problemas desde la hoja.
-
-### KISS
-
-La solución separa problemas detectando columnas vacías, que es exactamente la regla del enunciado.
-
-### YAGNI
-
-La parte 2 se implementó cuando ya tenía el enunciado. Antes de eso no había inventado una lectura alternativa.
-
-### Encapsulación
-
-`MathProblem` guarda una copia de la lista de números, así no se modifica desde fuera.
-
-### Bajo acoplamiento
-
-`WorksheetSolver` no sabe nada del formato visual de la hoja. Trabaja con objetos `MathProblem`.
-
-### Alta cohesión
-
-El paquete `worksheet` trata solo conceptos de la hoja de matemáticas. El paquete `input` se centra solo en parsear.
-
-## Tests del Día 6
-
-### `TrashCompactorPuzzleTest`
-
-Comprueba:
-
-- El ejemplo oficial completo de parte 1, con resultado `4277556`.
-- El ejemplo oficial completo de parte 2, con resultado `3263827`.
-
-### `WorksheetParserTest`
-
-Comprueba:
-
-- Separar problemas usando columnas vacías.
-- Parsear los resultados del ejemplo oficial.
-- Parsear los resultados del ejemplo oficial usando la lectura de derecha a izquierda.
-- Formar números desde columnas en la parte 2.
-- Rechazar un problema sin operación.
-
-### `MathProblemTest`
-
-Comprueba:
-
-- Resolver sumas.
-- Resolver multiplicaciones.
-- Rechazar problemas sin números.
-
-### `WorksheetSolverTest`
-
-Comprueba que se suman correctamente los resultados de varios problemas.
+Los tests cubren el ejemplo oficial de parte 1 con resultado `4277556` y parte 2 con resultado `3263827`. Tambi?n prueban parseo de l?neas, lectura de derecha a izquierda, rechazo de caracteres inv?lidos, operaciones matem?ticas y suma total de problemas.
 
 ## Día 7: Laboratories
 

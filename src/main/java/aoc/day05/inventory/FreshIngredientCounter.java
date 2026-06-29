@@ -1,43 +1,27 @@
 package aoc.day05.inventory;
 
-import java.util.Comparator;
-import java.util.List;
+import aoc.day05.solver.FreshIngredientSolver;
+import aoc.day05.solver.AllFreshIngredientSolver;
+import aoc.day05.solver.AvailableFreshIngredientSolver;
 
 public final class FreshIngredientCounter {
+    private final FreshIngredientSolver partOneSolver;
+    private final FreshIngredientSolver partTwoSolver;
+
+    public FreshIngredientCounter() {
+        this(new AvailableFreshIngredientSolver(), new AllFreshIngredientSolver());
+    }
+
+    public FreshIngredientCounter(FreshIngredientSolver partOneSolver, FreshIngredientSolver partTwoSolver) {
+        this.partOneSolver = partOneSolver;
+        this.partTwoSolver = partTwoSolver;
+    }
+
     public long countFreshAvailableIngredients(InventoryDatabase inventoryDatabase) {
-        return inventoryDatabase.availableIngredientIds().stream()
-                .filter(ingredientId -> isFresh(ingredientId, inventoryDatabase))
-                .count();
+        return partOneSolver.solve(inventoryDatabase);
     }
 
     public long countAllFreshIngredientIds(InventoryDatabase inventoryDatabase) {
-        List<IngredientIdRange> sortedRanges = inventoryDatabase.freshRanges().stream()
-                .sorted(Comparator.comparingLong(IngredientIdRange::firstId))
-                .toList();
-        if (sortedRanges.isEmpty()) {
-            return 0;
-        }
-
-        long totalFreshIds = 0;
-        long currentFirstId = sortedRanges.getFirst().firstId();
-        long currentLastId = sortedRanges.getFirst().lastId();
-
-        for (int index = 1; index < sortedRanges.size(); index++) {
-            IngredientIdRange range = sortedRanges.get(index);
-            if (range.firstId() <= currentLastId + 1) {
-                currentLastId = Math.max(currentLastId, range.lastId());
-            } else {
-                totalFreshIds += currentLastId - currentFirstId + 1;
-                currentFirstId = range.firstId();
-                currentLastId = range.lastId();
-            }
-        }
-
-        return totalFreshIds + currentLastId - currentFirstId + 1;
-    }
-
-    private boolean isFresh(long ingredientId, InventoryDatabase inventoryDatabase) {
-        return inventoryDatabase.freshRanges().stream()
-                .anyMatch(range -> range.contains(ingredientId));
+        return partTwoSolver.solve(inventoryDatabase);
     }
 }
