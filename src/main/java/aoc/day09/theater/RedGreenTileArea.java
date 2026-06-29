@@ -7,14 +7,14 @@ import java.util.List;
 import java.util.Queue;
 import java.util.TreeSet;
 
-final class RedGreenTileArea {
+public final class RedGreenTileArea {
     private final List<VerticalBand> allowedBands;
 
     private RedGreenTileArea(List<VerticalBand> allowedBands) {
         this.allowedBands = allowedBands;
     }
 
-    static RedGreenTileArea from(List<RedTile> redTiles) {
+    public static RedGreenTileArea from(List<RedTile> redTiles) {
         Bounds bounds = Bounds.from(redTiles);
         AxisCompression xAxis = AxisCompression.from(redTiles.stream().map(RedTile::x).toList(), bounds.minimumX() - 1, bounds.maximumX() + 1);
         AxisCompression yAxis = AxisCompression.from(redTiles.stream().map(RedTile::y).toList(), bounds.minimumY() - 1, bounds.maximumY() + 1);
@@ -23,7 +23,7 @@ final class RedGreenTileArea {
         return new RedGreenTileArea(buildAllowedBands(bounds, xAxis, yAxis, outside));
     }
 
-    boolean containsRectangleBetween(RedTile first, RedTile second) {
+    public boolean containsRectangleBetween(RedTile first, RedTile second) {
         long minimumX = Math.min(first.x(), second.x());
         long maximumX = Math.max(first.x(), second.x());
         long minimumY = Math.min(first.y(), second.y());

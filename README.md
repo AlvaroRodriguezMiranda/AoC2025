@@ -254,461 +254,131 @@ SRP separa interpretaci?n de la hoja, representaci?n de problemas, operaciones m
 
 Los tests cubren el ejemplo oficial de parte 1 con resultado `4277556` y parte 2 con resultado `3263827`. Tambi?n prueban parseo de l?neas, lectura de derecha a izquierda, rechazo de caracteres inv?lidos, operaciones matem?ticas y suma total de problemas.
 
-## Día 7: Laboratories
+## D?a 7: Laboratories
 
-### Qué pide el problema
+### Qu? pide el problema
 
-El Día 7 trata de un laboratorio con un manifold de taquiones. La entrada es un diagrama con tres tipos de celdas:
+El D?a 7 trabaja con un manifold de taquiones representado como una cuadr?cula. El punto `S` marca el inicio y los caracteres `^` representan splitters.
 
-- `S`: punto por donde entra el haz.
-- `.`: espacio vacío.
-- `^`: splitter, que divide un haz en dos.
+En la parte 1 se cuenta cu?ntos splitters activa el haz. Cuando el haz encuentra un splitter, se divide hacia izquierda y derecha en la siguiente fila.
 
-El haz empieza en `S` y siempre baja. Si pasa por espacios vacíos, sigue bajando en la misma columna. Si encuentra un splitter `^`, ese haz se detiene, se cuenta una división y nacen dos haces nuevos: uno a la izquierda y otro a la derecha del splitter.
+En la parte 2 se cuentan todas las l?neas temporales posibles. En esta parte no basta con saber qu? columnas est?n activas: tambi?n importa cu?ntas l?neas llegan a cada columna, por eso se usa `BigInteger`.
 
-Con el ejemplo oficial, el haz se divide:
+### Estructura del D?a 7
 
-```text
-21
-```
-
-### Parte 1
-
-En la parte 1 hay que contar cuántas veces se divide el haz antes de que todos los haces salgan del mapa o queden procesados.
-
-Una parte importante del problema es que dos haces pueden acabar en la misma posición. En ese caso no tiene sentido duplicarlos, porque desde esa posición se comportan igual. Por eso uso un `Set` de columnas activas en cada fila.
-
-### Parte 2
-
-En la parte 2 el manifold es cuántico. Ya no se pregunta cuántos splitters se activan, sino cuántas líneas temporales existen al final.
-
-La idea es distinta: si una partícula llega a un splitter, el tiempo se divide en dos. En una línea temporal la partícula va a la izquierda y en otra va a la derecha.
-
-Con el ejemplo oficial, el resultado de la parte 2 es:
-
-```text
-40
-```
-
-Para esta parte no puedo usar solo un `Set`, porque perdería información. Si dos caminos llegan a la misma columna, en parte 1 eso se puede juntar, pero en parte 2 siguen siendo líneas temporales distintas. Por eso uso un mapa donde la clave es la columna y el valor es cuántas líneas temporales llegan ahí.
-
-También uso `BigInteger` para el resultado de parte 2. Lo hago porque las líneas temporales pueden crecer muy rápido cuando hay muchos splitters, y así evito depender del límite de `long`.
-
-### Estructura del Día 7
-
-El código del Día 7 está en `aoc.day07` y lo he dividido así:
+El c?digo est? en `aoc.day07`:
 
 ```text
 aoc.day07
-├── LaboratoriesPuzzle.java
-├── input
-└── manifold
+??? LaboratoriesPuzzle.java
+??? input
+??? manifold
+??? solver
 ```
 
-### Paquete `manifold`
+En `manifold`, `TachyonManifold` representa la cuadr?cula y la posici?n inicial. `TachyonSplitterCounter` contiene el conteo de splitters de la parte 1 y `QuantumTimelineCounter` contiene el conteo de l?neas temporales de la parte 2.
 
-`GridPosition` representa una posición del diagrama con fila y columna.
+En `input`, `TachyonManifoldParser` convierte el texto en un `TachyonManifold` y valida el mapa.
 
-`TachyonManifold` representa el mapa del manifold. Guarda las celdas, la posición inicial y ofrece métodos para saber si una posición está dentro del mapa o si contiene un splitter.
+En `solver`, `TachyonSolver<T>` es la interfaz com?n. `SplitCountingSolver` resuelve la parte 1 y devuelve `Integer`. `QuantumTimelineSolver` resuelve la parte 2 y devuelve `BigInteger`.
 
-`TachyonSplitterCounter` contiene la regla principal del puzzle. Recorre el mapa por filas, mantiene las columnas donde hay haces activos y cuenta cada vez que un haz encuentra un splitter.
+`LaboratoriesPuzzle` coordina parser y estrategias.
 
-`QuantumTimelineCounter` contiene la regla de la parte 2. Recorre el mismo mapa, pero en vez de guardar solo columnas activas, guarda cuántas líneas temporales llegan a cada columna.
+### Patrones usados en D?a 7
 
-### Paquete `input`
-
-`TachyonManifoldParser` convierte las líneas del archivo en un `TachyonManifold`. También valida que el mapa no esté vacío, que sea rectangular, que solo tenga caracteres permitidos y que exista exactamente un `S`.
-
-### `LaboratoriesPuzzle`
-
-`LaboratoriesPuzzle` coordina el Día 7. Recibe las líneas de entrada, usa el parser y después llama al contador correspondiente.
-
-Tiene dos métodos separados:
-
-- `solvePartOne`, que cuenta divisiones clásicas del haz.
-- `solvePartTwo`, que cuenta líneas temporales cuánticas.
-
-También tiene un `main` que lee:
-
-```text
-src/main/resources/day07/input.txt
-```
+Uso Strategy para separar el solver de parte 1 y el solver de parte 2. Las dos estrategias trabajan con el mismo `TachyonManifold`, pero devuelven tipos distintos porque la parte 2 puede crecer mucho m?s.
 
 ### Principios aplicados
 
-### SRP
+SRP separa parser, modelo del manifold, contadores y estrategias. DRY se mantiene porque la validaci?n y las consultas sobre la cuadr?cula est?n en `TachyonManifold`. KISS se mantiene dejando el algoritmo de cada parte en su clase. La encapsulaci?n aparece en la copia interna de las celdas del manifold.
 
-Cada clase tiene una responsabilidad clara:
+### Tests del D?a 7
 
-- `TachyonManifoldParser` parsea y valida la entrada.
-- `TachyonManifold` representa el mapa.
-- `GridPosition` representa coordenadas.
-- `TachyonSplitterCounter` aplica la regla de propagación del haz.
-- `QuantumTimelineCounter` aplica la regla de líneas temporales de la parte 2.
-- `LaboratoriesPuzzle` coordina el flujo del día.
+Los tests cubren el ejemplo oficial, el parseo del manifold, el conteo de splitters, el conteo de l?neas temporales, mapas inv?lidos y casos donde varias l?neas temporales llegan a la misma columna.
 
-### DRY
+## D?a 8: Playground
 
-La comprobación de si hay splitter está en `TachyonManifold`, no repetida en los contadores. Los dos solvers preguntan al dominio y no acceden directamente a la estructura interna del mapa.
+### Qu? pide el problema
 
-Parte 1 y parte 2 reutilizan el mismo parser y el mismo modelo del manifold. Lo único que cambia es la regla de conteo.
+El D?a 8 trabaja con cajas de conexiones en un espacio tridimensional. Cada caja tiene coordenadas y se conectan primero las parejas m?s cercanas.
 
-### KISS
+En la parte 1 se aplican las primeras 1000 conexiones por distancia y se multiplican los tama?os de los tres circuitos m?s grandes.
 
-La solución recorre el mapa de arriba abajo, igual que se mueve el haz. En cada fila solo mantiene las columnas activas, así que el algoritmo es fácil de explicar.
+En la parte 2 se siguen conectando cajas hasta que todo forma un ?nico circuito. La respuesta es el producto de las coordenadas `X` de las dos cajas de la conexi?n que consigue unirlo todo.
 
-### YAGNI
+### Estructura del D?a 8
 
-La parte 2 se implementó cuando ya tenía el enunciado. Antes de eso no añadí comportamiento futuro inventado.
-
-### Encapsulación
-
-`TachyonManifold` guarda una copia de las celdas. Desde fuera no se modifica directamente la lista interna.
-
-### Bajo acoplamiento
-
-`TachyonSplitterCounter` y `QuantumTimelineCounter` trabajan con un `TachyonManifold`, no con líneas de texto. Así la lógica del haz no depende del formato exacto del archivo.
-
-### Alta cohesión
-
-El paquete `manifold` contiene solo conceptos del mapa y del haz. El paquete `input` se centra solo en convertir texto en dominio.
-
-## Tests del Día 7
-
-### `LaboratoriesPuzzleTest`
-
-Comprueba:
-
-- El ejemplo oficial completo de parte 1, con resultado `21`.
-- El ejemplo oficial completo de parte 2, con resultado `40`.
-
-### `TachyonManifoldParserTest`
-
-Comprueba:
-
-- Parseo de la posición inicial y los splitters.
-- Rechazo de un diagrama sin `S`.
-- Rechazo de más de un `S`.
-- Rechazo de un mapa no rectangular.
-- Rechazo de caracteres no permitidos.
-
-### `TachyonSplitterCounterTest`
-
-Comprueba:
-
-- Un mapa sin splitters alcanzados.
-- Un mapa donde el haz se divide una vez.
-- Un caso donde varios haces se combinan en la misma columna.
-
-### `QuantumTimelineCounterTest`
-
-Comprueba:
-
-- Que sin splitters sigue existiendo una sola línea temporal.
-- Que un splitter crea dos líneas temporales.
-- Que varias líneas temporales que llegan a la misma columna se suman, no se eliminan.
-
-## Día 8: Playground
-
-### Qué pide el problema
-
-El Día 8 trata de cajas de conexión suspendidas en un espacio 3D. Cada línea del input contiene una posición con coordenadas `X,Y,Z`, por ejemplo:
-
-```text
-162,817,812
-57,618,57
-906,360,560
-```
-
-La idea es conectar las parejas de cajas que estén más cerca entre sí. Cuando dos cajas se conectan, pasan a formar parte del mismo circuito, y la electricidad puede llegar a todas las cajas de ese circuito.
-
-En la parte 1 hay que tomar las 1000 parejas de cajas más cercanas. Después de hacer esas conexiones, se buscan los tamaños de los tres circuitos más grandes y se multiplican.
-
-Con el ejemplo oficial, usando las 10 conexiones más cortas, los tres circuitos más grandes tienen tamaños `5`, `4` y `2`, y el resultado es:
-
-```text
-40
-```
-
-### Parte 2
-
-En la parte 2 hay que seguir conectando parejas por orden de cercanía hasta que todas las cajas formen un único circuito.
-
-La respuesta no es el tamaño del circuito final, porque al final contiene todas las cajas. Lo que pide el enunciado es mirar cuál fue la última conexión necesaria para unirlo todo y multiplicar las coordenadas `X` de esas dos cajas.
-
-Con el ejemplo oficial, la conexión final necesaria es entre:
-
-```text
-216,146,977
-117,168,530
-```
-
-El resultado del ejemplo es:
-
-```text
-25272
-```
-
-### Estructura del Día 8
-
-El código del Día 8 está en `aoc.day08` y lo he dividido así:
+El c?digo est? en `aoc.day08`:
 
 ```text
 aoc.day08
-├── PlaygroundPuzzle.java
-├── circuit
-└── input
+??? PlaygroundPuzzle.java
+??? circuit
+??? input
+??? solver
 ```
 
-### Paquete `circuit`
+En `circuit`, `JunctionBox` representa una caja, `JunctionConnection` representa una conexi?n candidata, `JunctionConnectionPlanner` ordena las conexiones por distancia y `CircuitNetwork` mantiene los grupos conectados con uni?n de conjuntos. `CircuitSizeCalculator` queda como fachada compatible para los tests existentes.
 
-`JunctionBox` representa una caja de conexión con coordenadas `x`, `y` y `z`. También calcula la distancia al cuadrado con otra caja.
+En `input`, `JunctionBoxParser` convierte las l?neas del archivo en cajas.
 
-Uso distancia al cuadrado porque para ordenar distancias no hace falta calcular la raíz cuadrada. Si una distancia al cuadrado es menor que otra, la distancia real también lo es. Así mantengo el cálculo más simple.
+En `solver`, `CircuitSolver` es la interfaz com?n. `ThreeLargestCircuitSizeSolver` resuelve la parte 1. `LastConnectionXCoordinateSolver` resuelve la parte 2.
 
-`JunctionConnection` representa una posible conexión entre dos cajas. Guarda los índices de las cajas y la distancia al cuadrado entre ellas.
+`PlaygroundPuzzle` coordina parser y estrategias.
 
-`CircuitNetwork` representa los circuitos que se van formando. Internamente usa una estructura de unión de conjuntos para juntar circuitos y consultar sus tamaños.
+### Patrones usados en D?a 8
 
-`CircuitSizeCalculator` genera todas las parejas posibles, las ordena por distancia y aplica las conexiones más cortas. En parte 1 obtiene los tres circuitos más grandes y multiplica sus tamaños. En parte 2 sigue conectando hasta que solo queda un circuito y devuelve el producto de las coordenadas `X` de la última conexión útil.
-
-### Paquete `input`
-
-`JunctionBoxParser` convierte las líneas del archivo en objetos `JunctionBox`. También valida que cada línea tenga tres coordenadas y que sean números.
-
-### `PlaygroundPuzzle`
-
-`PlaygroundPuzzle` coordina el Día 8. Recibe las líneas de entrada, usa el parser y llama al calculador.
-
-Tiene dos métodos separados:
-
-- `solvePartOne`, que aplica las 1000 conexiones más cortas.
-- `solvePartTwo`, que conecta hasta formar un único circuito.
-
-También tiene un `main` que lee:
-
-```text
-src/main/resources/day08/input.txt
-```
+Uso Strategy para separar los dos c?lculos: uno corta despu?s de un n?mero fijo de conexiones y otro busca la conexi?n que deja un ?nico circuito.
 
 ### Principios aplicados
 
-### SRP
+SRP separa cajas, conexiones candidatas, red de circuitos, planificaci?n de conexiones y solvers. DRY aparece en `JunctionConnectionPlanner`, que ordena las conexiones una sola vez con la misma regla para ambas partes. KISS se mantiene usando distancia al cuadrado y uni?n de conjuntos. La encapsulaci?n est? en `CircuitNetwork`, que oculta los arrays internos de padres y tama?os.
 
-Cada clase tiene una responsabilidad clara:
+### Tests del D?a 8
 
-- `JunctionBox` representa una posición 3D.
-- `JunctionBoxParser` parsea la entrada.
-- `CircuitNetwork` gestiona la unión de circuitos.
-- `CircuitSizeCalculator` decide qué conexiones aplicar y calcula el resultado.
-- `PlaygroundPuzzle` coordina el flujo del día.
+Los tests cubren el ejemplo oficial, parseo de cajas, distancia entre cajas, conexi?n de circuitos, tama?os de circuitos y la conexi?n que deja un ?nico circuito.
 
-### DRY
+## D?a 9: Movie Theater
 
-La distancia entre cajas se calcula solo en `JunctionBox`. La lógica de unión de circuitos está solo en `CircuitNetwork`.
+### Qu? pide el problema
 
-Parte 1 y parte 2 reutilizan el mismo parser, el mismo modelo de caja y la misma red de circuitos. Lo que cambia es cuándo se detiene el proceso y qué valor se devuelve.
+El D?a 9 trabaja con baldosas rojas en una sala de cine. Cada baldosa tiene coordenadas y se buscan rect?ngulos formados entre pares de baldosas.
 
-### KISS
+En la parte 1 se busca el rect?ngulo de mayor ?rea entre cualquier pareja de baldosas rojas.
 
-La solución sigue directamente el enunciado: generar parejas, ordenarlas por distancia y aplicar conexiones. En parte 1 se detiene tras 1000 parejas; en parte 2 se detiene cuando todo queda en un único circuito.
+En la parte 2 el rect?ngulo tiene que quedar dentro de la zona roja o verde delimitada por el camino cerrado de baldosas. Para evitar recorrer una cuadr?cula enorme, la zona v?lida se calcula con compresi?n de coordenadas.
 
-### YAGNI
+### Estructura del D?a 9
 
-La parte 2 se implementó cuando ya tenía el enunciado. Antes de eso no añadí comportamiento futuro inventado.
-
-### Encapsulación
-
-`CircuitNetwork` oculta cómo se representan internamente los circuitos. Desde fuera solo se le pide conectar dos cajas y devolver los tamaños finales.
-
-### Bajo acoplamiento
-
-`CircuitSizeCalculator` trabaja con `JunctionBox`, no con líneas de texto. El parser queda separado del cálculo.
-
-### Alta cohesión
-
-El paquete `circuit` contiene solo conceptos de cajas, conexiones y circuitos. El paquete `input` se centra solo en parsear.
-
-## Tests del Día 8
-
-### `PlaygroundPuzzleTest`
-
-Comprueba:
-
-- El ejemplo oficial de la parte 1 usando 10 conexiones, con resultado `40`.
-- El ejemplo oficial de la parte 2, con resultado `25272`.
-
-### `JunctionBoxParserTest`
-
-Comprueba:
-
-- Parseo de coordenadas.
-- Ignorar líneas vacías.
-- Rechazo de input vacío.
-- Rechazo de líneas sin tres coordenadas.
-- Rechazo de coordenadas no numéricas.
-
-### `JunctionBoxTest`
-
-Comprueba el cálculo de distancia al cuadrado entre dos cajas.
-
-### `CircuitSizeCalculatorTest`
-
-Comprueba:
-
-- Que se conectan las parejas más cercanas.
-- Que una conexión dentro del mismo circuito no cambia los tamaños.
-- Que se rechaza calcular el producto si hay menos de tres cajas.
-- Que se devuelve el producto de las coordenadas `X` de la conexión que deja un solo circuito.
-- Que parte 2 rechaza una lista con menos de dos cajas.
-
-## Día 9: Movie Theater
-
-### Qué pide el problema
-
-El Día 9 trata de un suelo de cine con baldosas rojas. La entrada contiene las posiciones de esas baldosas en una cuadrícula, una por línea:
-
-```text
-7,1
-11,1
-11,7
-```
-
-Hay que elegir dos baldosas rojas como esquinas opuestas de un rectángulo y encontrar el área más grande posible.
-
-Un detalle importante es que el área se cuenta de forma inclusiva. Por ejemplo, entre `2,5` y `9,7` la anchura es `8`, porque se cuentan las columnas `2` hasta `9`, y la altura es `3`, porque se cuentan las filas `5` hasta `7`. Por eso el área es:
-
-```text
-24
-```
-
-Con el ejemplo oficial, el área máxima es:
-
-```text
-50
-```
-
-### Parte 2
-
-En la parte 2 ya no sirve cualquier rectángulo. Los elfos solo pueden cambiar baldosas rojas o verdes.
-
-Las baldosas rojas de la entrada forman un camino cerrado. Cada baldosa roja está conectada con la anterior y la siguiente mediante una línea recta de baldosas verdes. Además, todo lo que queda dentro de ese bucle también se considera verde.
-
-El rectángulo sigue necesitando dos baldosas rojas como esquinas opuestas, pero ahora todas las baldosas que ocupa el rectángulo deben ser rojas o verdes. En el ejemplo oficial, el área máxima baja de `50` a:
-
-```text
-24
-```
-
-### Estructura del Día 9
-
-El código del Día 9 está en `aoc.day09` y lo he dividido así:
+El c?digo est? en `aoc.day09`:
 
 ```text
 aoc.day09
-├── MovieTheaterPuzzle.java
-├── input
-└── theater
+??? MovieTheaterPuzzle.java
+??? input
+??? theater
+??? solver
 ```
 
-### Paquete `theater`
+En `theater`, `RedTile` representa una baldosa y encapsula el c?lculo de ?rea inclusiva con otra baldosa. `RedGreenTileArea` representa la zona v?lida de la parte 2. `LargestRectangleFinder` queda como fachada compatible para los tests existentes.
 
-`RedTile` representa una baldosa roja con coordenadas `x` e `y`. También calcula el área del rectángulo que forma con otra baldosa roja.
+En `input`, `RedTileParser` convierte el texto en baldosas.
 
-`LargestRectangleFinder` compara pares de baldosas rojas. En parte 1 se queda con el área más grande sin más restricciones. En parte 2 solo acepta el rectángulo si está completamente dentro de la zona roja o verde.
+En `solver`, `TheaterAreaSolver` es la interfaz com?n. `UnrestrictedRectangleAreaSolver` resuelve la parte 1. `RedGreenRectangleAreaSolver` resuelve la parte 2 comprobando que el rect?ngulo est? dentro de la zona v?lida.
 
-`RedGreenTileArea` representa la zona permitida de la parte 2. Construye el borde del camino cerrado y después hace un relleno desde fuera para saber qué baldosas quedan dentro del bucle. Para que funcione con coordenadas grandes, no rellena cada baldosa una por una, sino que usa coordenadas comprimidas y trabaja con bloques.
+`MovieTheaterPuzzle` coordina parser y estrategias.
 
-### Paquete `input`
+### Patrones usados en D?a 9
 
-`RedTileParser` convierte las líneas del archivo en objetos `RedTile`. También valida que cada línea tenga dos coordenadas y que ambas sean números.
-
-### `MovieTheaterPuzzle`
-
-`MovieTheaterPuzzle` coordina el Día 9. Recibe las líneas de entrada, usa el parser y llama al buscador del rectángulo máximo.
-
-Tiene dos métodos separados:
-
-- `solvePartOne`, que busca el mayor rectángulo usando cualquier par de baldosas rojas.
-- `solvePartTwo`, que busca el mayor rectángulo que solo usa baldosas rojas o verdes.
-
-También tiene un `main` que lee:
-
-```text
-src/main/resources/day09/input.txt
-```
+Uso Strategy para separar el c?lculo sin restricciones de la parte 1 y el c?lculo restringido por zona v?lida de la parte 2.
 
 ### Principios aplicados
 
-### SRP
+SRP separa parser, modelo de baldosa, zona v?lida y solvers. DRY aparece en `RedTile.rectangleAreaWith(...)`, que concentra la f?rmula de ?rea inclusiva. KISS se mantiene con dos estrategias peque?as y un objeto espec?fico para la zona roja/verde. La encapsulaci?n evita que los solvers conozcan los detalles internos de la compresi?n de coordenadas.
 
-Cada clase tiene una responsabilidad clara:
+### Tests del D?a 9
 
-- `RedTile` representa una baldosa roja y calcula áreas con otra baldosa.
-- `RedGreenTileArea` representa la zona roja y verde disponible.
-- `RedTileParser` parsea la entrada.
-- `LargestRectangleFinder` busca el área máxima.
-- `MovieTheaterPuzzle` coordina el flujo del día.
-
-### DRY
-
-La fórmula del área inclusiva está solo en `RedTile`. Así no se repite en el solver ni en los tests.
-
-La parte 1 y la parte 2 reutilizan el mismo parser y el mismo modelo `RedTile`. Lo que cambia es la validación extra de la zona roja/verde.
-
-### KISS
-
-La solución compara todos los pares de baldosas rojas. Para parte 1 basta con calcular áreas. Para parte 2 añado una comprobación clara: el rectángulo debe estar contenido dentro de la zona roja/verde.
-
-### YAGNI
-
-La parte 2 se implementó cuando ya tenía el enunciado. Antes de eso no añadí comportamiento inventado.
-
-### Encapsulación
-
-`RedTile` encapsula cómo se calcula el área con otra baldosa. El solver no necesita conocer los detalles de anchura, altura y suma inclusiva.
-
-`RedGreenTileArea` encapsula cómo se decide si una baldosa pertenece a la zona válida. El solver no necesita saber los detalles del relleno exterior.
-
-### Bajo acoplamiento
-
-`LargestRectangleFinder` trabaja con objetos `RedTile`, no con líneas de texto. El parseo queda separado del cálculo.
-
-### Alta cohesión
-
-El paquete `theater` contiene solo conceptos del cine y sus baldosas. El paquete `input` solo se encarga de convertir texto en dominio.
-
-## Tests del Día 9
-
-### `MovieTheaterPuzzleTest`
-
-Comprueba:
-
-- El ejemplo oficial completo de parte 1, con resultado `50`.
-- El ejemplo oficial completo de parte 2, con resultado `24`.
-
-### `RedTileParserTest`
-
-Comprueba:
-
-- Parseo de coordenadas.
-- Ignorar líneas vacías.
-- Rechazo de input vacío.
-- Rechazo de líneas sin dos coordenadas.
-- Rechazo de coordenadas no numéricas.
-
-### `RedTileTest`
-
-Comprueba que el área del rectángulo se calcula de forma inclusiva.
-
-### `LargestRectangleFinderTest`
-
-Comprueba:
-
-- Que se encuentra el área más grande entre varios pares.
-- Que funcionan rectángulos finos de una sola fila.
-- Que se encuentra el área más grande dentro de la zona roja/verde.
-- Que se rechaza una lista con menos de dos baldosas rojas.
+Los tests cubren el ejemplo oficial, parseo de baldosas, c?lculo de ?rea inclusiva, b?squeda del ?rea m?xima, validaci?n de entrada y ?rea m?xima dentro de la zona roja/verde.
 
 ## Día 10: Factory
 

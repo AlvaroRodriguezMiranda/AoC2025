@@ -4,6 +4,9 @@ import aoc.day07.input.TachyonManifoldParser;
 import aoc.day07.manifold.QuantumTimelineCounter;
 import aoc.day07.manifold.TachyonManifold;
 import aoc.day07.manifold.TachyonSplitterCounter;
+import aoc.day07.solver.QuantumTimelineSolver;
+import aoc.day07.solver.SplitCountingSolver;
+import aoc.day07.solver.TachyonSolver;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -13,27 +16,35 @@ import java.util.List;
 
 public final class LaboratoriesPuzzle {
     private final TachyonManifoldParser parser;
-    private final TachyonSplitterCounter splitterCounter;
-    private final QuantumTimelineCounter timelineCounter;
+    private final TachyonSolver<Integer> partOneSolver;
+    private final TachyonSolver<BigInteger> partTwoSolver;
 
     public LaboratoriesPuzzle(
             TachyonManifoldParser parser,
             TachyonSplitterCounter splitterCounter,
             QuantumTimelineCounter timelineCounter
     ) {
+        this(parser, new SplitCountingSolver(splitterCounter), new QuantumTimelineSolver(timelineCounter));
+    }
+
+    public LaboratoriesPuzzle(
+            TachyonManifoldParser parser,
+            TachyonSolver<Integer> partOneSolver,
+            TachyonSolver<BigInteger> partTwoSolver
+    ) {
         this.parser = parser;
-        this.splitterCounter = splitterCounter;
-        this.timelineCounter = timelineCounter;
+        this.partOneSolver = partOneSolver;
+        this.partTwoSolver = partTwoSolver;
     }
 
     public int solvePartOne(List<String> inputLines) {
         TachyonManifold manifold = parser.parse(inputLines);
-        return splitterCounter.countSplits(manifold);
+        return partOneSolver.solve(manifold);
     }
 
     public BigInteger solvePartTwo(List<String> inputLines) {
         TachyonManifold manifold = parser.parse(inputLines);
-        return timelineCounter.countTimelines(manifold);
+        return partTwoSolver.solve(manifold);
     }
 
     public static void main(String[] args) throws IOException {

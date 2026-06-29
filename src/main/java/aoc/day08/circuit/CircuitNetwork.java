@@ -3,12 +3,12 @@ package aoc.day08.circuit;
 import java.util.List;
 import java.util.stream.IntStream;
 
-final class CircuitNetwork {
+public final class CircuitNetwork {
     private final int[] parents;
     private final int[] sizes;
     private int circuitCount;
 
-    CircuitNetwork(int circuitCount) {
+    public CircuitNetwork(int circuitCount) {
         this.parents = new int[circuitCount];
         this.sizes = new int[circuitCount];
         this.circuitCount = circuitCount;
@@ -19,7 +19,7 @@ final class CircuitNetwork {
         }
     }
 
-    boolean connect(int firstCircuit, int secondCircuit) {
+    public boolean connect(int firstCircuit, int secondCircuit) {
         int firstRoot = find(firstCircuit);
         int secondRoot = find(secondCircuit);
 
@@ -39,11 +39,11 @@ final class CircuitNetwork {
         return true;
     }
 
-    boolean isSingleCircuit() {
+    public boolean isSingleCircuit() {
         return circuitCount == 1;
     }
 
-    List<Integer> circuitSizesDescending() {
+    public List<Integer> circuitSizesDescending() {
         return IntStream.range(0, parents.length)
                 .filter(circuit -> find(circuit) == circuit)
                 .map(circuit -> sizes[circuit])
