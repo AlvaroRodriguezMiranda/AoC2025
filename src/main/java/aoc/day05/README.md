@@ -20,8 +20,6 @@ La entrada tiene dos secciones:
 
 La primera seccion contiene rangos de IDs frescos. La segunda seccion contiene IDs concretos de ingredientes disponibles.
 
-La linea en blanco es importante porque separa las dos partes del input.
-
 ## Parte 1
 
 En la primera parte hay que contar cuantos ingredientes disponibles son frescos.
@@ -51,8 +49,6 @@ Los ingredientes frescos disponibles son:
 
 La respuesta de la parte 1 seria `3`.
 
-En mi codigo esta parte se resuelve con `AvailableFreshIngredientSolver`.
-
 ## Parte 2
 
 En la segunda parte ya no se mira solo la lista de ingredientes disponibles. Ahora hay que contar cuantos IDs frescos existen en total segun todos los rangos.
@@ -79,8 +75,6 @@ Tambien se fusionan rangos adyacentes:
 Como `4` viene justo despues de `3`, se consideran una zona continua de `1` a `6`.
 
 La respuesta de la parte 2 es el numero total de IDs cubiertos por los rangos frescos despues de fusionarlos.
-
-En mi codigo esta parte se resuelve con `AllFreshIngredientSolver`.
 
 ## Estructura del paquete
 
@@ -320,10 +314,6 @@ La condicion de fusion es:
 range.firstId() <= currentLastId + 1
 ```
 
-Esto cubre tanto solapamiento como adyacencia.
-
-El tamano de un rango inclusivo se calcula con:
-
 ```java
 currentLastId - currentFirstId + 1
 ```
@@ -409,21 +399,6 @@ Las dos estrategias son:
 * `AllFreshIngredientSolver`
 
 Ambas reciben un `InventoryDatabase`, pero una cuenta ingredientes disponibles y la otra cuenta la union completa de rangos.
-
-### Facade
-
-`FreshIngredientCounter` funciona como fachada.
-
-Expone metodos claros:
-
-* `countFreshAvailableIngredients(...)`
-* `countAllFreshIngredientIds(...)`
-
-Por debajo delega en los solvers concretos.
-
-### Value Object
-
-`IngredientIdRange` funciona como value object. Representa un rango del dominio, valida sus invariantes y se compara por contenido al ser un `record`.
 
 ## Patrones no aplicados
 

@@ -34,8 +34,6 @@ Para cada posicion con `@`, se cuentan sus vecinos en las ocho direcciones. Si e
 
 La respuesta de la parte 1 es el numero total de rollos accesibles.
 
-En mi codigo esta parte se resuelve con `AccessibleRollSolver`.
-
 ## Parte 2
 
 En la segunda parte ya no basta con contar los rollos accesibles del mapa inicial. Ahora se van retirando por rondas.
@@ -48,8 +46,6 @@ El flujo es:
 4. Se repite el proceso hasta que no quede ningun rollo accesible.
 
 La respuesta de la parte 2 es el total de rollos retirados sumando todas las rondas.
-
-En mi codigo esta parte se resuelve con `RemovableRollSolver`.
 
 ## Estructura del paquete
 
@@ -143,8 +139,6 @@ Por ejemplo, esta entrada es invalida:
 @.
 ```
 
-El parser no comprueba directamente si el mapa es rectangular. Esa validacion queda en `PaperRollGrid`, que es quien conoce las reglas de una cuadricula valida.
-
 ## Clases del paquete `paper`
 
 El paquete `paper` contiene las clases del dominio del mapa de rollos.
@@ -157,8 +151,6 @@ Contiene:
 
 * `row`: fila.
 * `column`: columna.
-
-Al ser un `record`, es inmutable y se compara por valor. Esto lo hace comodo para guardar posiciones, pasarlas entre clases y usarlas en tests.
 
 ### `PaperRollGrid`
 
@@ -185,7 +177,7 @@ Devuelven las dimensiones de la cuadricula.
 public boolean hasPaperRollAt(GridPosition position)
 ```
 
-Indica si hay un rollo en una posicion. Si la posicion esta fuera del mapa, devuelve `false`.
+Indica si hay un rollo en una posicion.
 
 ```java
 public int adjacentPaperRolls(GridPosition position)
@@ -205,7 +197,7 @@ public PaperRollGrid withoutPaperRolls(List<GridPosition> positionsToRemove)
 
 Crea una nueva cuadricula sustituyendo por `.` las posiciones indicadas.
 
-Este metodo es importante para la parte 2. No modifica el mapa original; crea un nuevo `PaperRollGrid`. Asi se evita que una ronda afecte parcialmente al calculo de esa misma ronda.
+Este metodo es importante para la parte 2. No modifica el mapa original; crea un nuevo `PaperRollGrid`.
 
 ### `ForkliftAccessSolver`
 
@@ -227,8 +219,6 @@ Tambien tiene un constructor por defecto que crea:
 new AccessibleRollSolver()
 new RemovableRollSolver()
 ```
-
-La ventaja de esta clase es que el codigo que usa el paquete `paper` no necesita conocer las clases concretas del paquete `solver`.
 
 ## Clases del paquete `solver`
 
@@ -271,7 +261,7 @@ El metodo:
 static boolean isAccessible(PaperRollGrid paperRollGrid, GridPosition position)
 ```
 
-es estatico a nivel de paquete para que `RemovableRollSolver` pueda reutilizar exactamente la misma regla en la parte 2.
+es estatico para que `RemovableRollSolver` pueda reutilizar exactamente la misma regla en la parte 2.
 
 ### `RemovableRollSolver`
 
@@ -382,21 +372,6 @@ Las dos estrategias son:
 * `RemovableRollSolver`
 
 Ambas reciben un `PaperRollGrid`, pero una cuenta accesibles una vez y la otra repite el proceso por rondas.
-
-### Facade
-
-`ForkliftAccessSolver` funciona como fachada.
-
-Expone metodos simples:
-
-* `countAccessibleRolls(...)`
-* `countRemovableRolls(...)`
-
-Por debajo delega en las estrategias concretas.
-
-### Value Object
-
-`GridPosition` funciona como value object. Representa una coordenada, es inmutable y se compara por contenido.
 
 ## Patrones no aplicados
 

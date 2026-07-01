@@ -41,8 +41,6 @@ Por tanto, se obtienen operaciones como:
 
 La respuesta de la parte 1 es la suma de los resultados de todos los problemas.
 
-En mi codigo esta parte se resuelve con `TopToBottomWorksheetSolver`.
-
 ## Parte 2
 
 En la segunda parte, la hoja se interpreta de derecha a izquierda dentro de cada bloque de columnas.
@@ -71,8 +69,6 @@ La operacion seria:
 ```
 
 La respuesta de la parte 2 tambien es la suma de los resultados de todos los problemas, pero usando este modo de lectura.
-
-En mi codigo esta parte se resuelve con `RightToLeftWorksheetSolver`.
 
 ## Estructura del paquete
 
@@ -177,8 +173,6 @@ Este metodo:
 2. Calcula la anchura maxima de todas las lineas.
 3. Rellena las lineas mas cortas con espacios a la derecha.
 
-Esto permite trabajar con indices de columna sin que una linea mas corta provoque errores.
-
 ### Separacion de problemas por columnas
 
 El metodo `findProblemColumns(...)` localiza bloques de columnas no vacias.
@@ -272,12 +266,6 @@ Su metodo principal es:
 
 ```java
 public long solve()
-```
-
-Este metodo delega en:
-
-```java
-operation.apply(numbers)
 ```
 
 Tambien expone:
@@ -446,7 +434,7 @@ Las dos estrategias son:
 
 Ambas reciben el mismo input, pero lo interpretan de forma distinta antes de resolverlo.
 
-### Static Factory Method
+### Factory Method
 
 `MathOperation.fromSymbol(...)` funciona como metodo de fabrica estatico.
 

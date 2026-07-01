@@ -89,25 +89,13 @@ Ambos metodos siguen el mismo flujo:
 
 1. Parsean las lineas con `BatteryBankParser`.
 2. Obtienen una lista de `BatteryBank`.
-3. Delegan el calculo en el solver correspondiente.
-
-La parte 1 devuelve `int` porque el resultado oficial de esa parte es mas pequeno. Internamente, el solver devuelve `long` y `LobbyPuzzle` usa `Math.toIntExact(...)` para convertirlo.
+3. Calculan en el solver correspondiente.
 
 El metodo `main` lee el archivo:
 
 ```text
 src/main/resources/day03/input.txt
 ```
-
-Despues crea el puzzle con:
-
-```java
-new BatteryBankParser()
-new TwoBatteryJoltageSolver()
-new TwelveBatteryJoltageSolver()
-```
-
-Finalmente imprime los resultados de parte 1 y parte 2.
 
 ## Clase del paquete `input`
 
@@ -139,15 +127,6 @@ Este metodo parsea una sola linea. Valida que la linea no sea `null`, vacia o so
 
 Despues recorre cada caracter y exige que sea un digito entre `1` y `9`. El `0` se rechaza porque el problema solo trabaja con baterias con valores del `1` al `9`.
 
-Ejemplos de entradas invalidas:
-
-```text
-120
-12A
-```
-
-Si la linea es valida, se transforma en una lista de enteros y se crea un `BatteryBank`.
-
 ## Clase del paquete `battery`
 
 El paquete `battery` contiene el modelo principal del dia.
@@ -155,8 +134,6 @@ El paquete `battery` contiene el modelo principal del dia.
 ### `BatteryBank`
 
 `BatteryBank` representa un banco de baterias.
-
-Internamente guarda una lista de enteros llamada `joltageRatings`. La lista se copia con `List.copyOf(...)` para evitar que se modifique desde fuera despues de crear el banco.
 
 Al construirse, valida que haya al menos 2 baterias:
 
@@ -178,31 +155,9 @@ public long maximumJoltageUsingBatteries(int batteryCount)
 
 Calcula el mayor numero posible usando una cantidad concreta de baterias.
 
-Este metodo valida que `batteryCount` este entre `1` y el tamano del banco. Si se pide usar mas baterias de las que existen, lanza una excepcion.
-
 ### Algoritmo de seleccion
 
 El algoritmo de `maximumJoltageUsingBatteries(...)` es voraz.
-
-Para cada posicion del resultado:
-
-1. Calcula cuantas baterias faltaran despues de elegir la actual.
-2. Determina hasta que indice puede mirar sin quedarse sin suficientes baterias para completar el resultado.
-3. Busca el digito mas grande dentro de esa ventana.
-4. Lo anade al numero resultado.
-5. Continua buscando a partir del indice siguiente al elegido.
-
-La clave esta en no elegir simplemente el mayor digito de toda la lista, porque podria estar demasiado tarde y no dejar suficientes baterias para completar el numero.
-
-Ejemplo simplificado:
-
-```text
-Banco: 8 1 8 1 8 1 9 1 1 1 1 2 1 1 1
-Elegir: 12 baterias
-Resultado esperado: 888911112111
-```
-
-El algoritmo escoge el mejor digito posible en cada paso, pero siempre respetando el orden y dejando hueco para los digitos restantes.
 
 ## Clases del paquete `solver`
 
@@ -235,14 +190,6 @@ El flujo es:
 1. Recorre todos los `BatteryBank`.
 2. Para cada banco llama a `maximumJoltageUsingBatteries(2)`.
 3. Suma todos los resultados.
-
-Usa streams:
-
-```java
-batteryBanks.stream()
-        .mapToLong(...)
-        .sum()
-```
 
 ### `TwelveBatteryJoltageSolver`
 
@@ -281,8 +228,6 @@ new TwelveBatteryJoltageSolver()
 ```
 
 Cada banco se reduce a su mejor numero de 12 digitos.
-
-El algoritmo no se duplica. La seleccion general esta en `BatteryBank.maximumJoltageUsingBatteries(...)` y cada solver solo fija el valor de `BATTERY_COUNT`.
 
 ## Fundamentos de diseno utilizados
 
@@ -342,10 +287,6 @@ Las dos estrategias son:
 
 Ambas reciben la misma lista de `BatteryBank`, pero cada una usa un numero distinto de baterias.
 
-### Value Object / modelo de dominio
-
-`BatteryBank` funciona como modelo del dominio. No es un simple contenedor de lista: valida el banco y contiene el comportamiento principal para calcular el joltage maximo.
-
 ## Patrones no aplicados
 
 No se usa `Singleton`, porque no hay ningun objeto global que deba tener una unica instancia.
@@ -380,5 +321,3 @@ Cubren:
 * Rechazar bancos con menos de 2 baterias.
 * Rechazar una cantidad de baterias mayor que el tamano del banco.
 * Sumar el resultado de varios bancos en el solver.
-
-Un caso importante es `8119`, porque demuestra que no se pueden ordenar los digitos. Aunque `9` es el mayor valor, el mejor numero de dos baterias respetando el orden es `89`.
